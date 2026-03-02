@@ -1,0 +1,2 @@
+-- Optional: add seed data for local development (e.g. test branches, departments).
+-- Not required for db push; used only when running supabase db reset locally.
