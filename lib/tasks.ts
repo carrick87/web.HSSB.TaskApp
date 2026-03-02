@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTodayAppDate } from "@/lib/date";
 
 /**
@@ -6,10 +7,11 @@ import { getTodayAppDate } from "@/lib/date";
  * Call this when loading the dashboard so "Tasks for today" shows recurring tasks even
  * if cron hasn't run (e.g. different timezone or cron not configured).
  * Uses app timezone so "today" matches the region (e.g. Asia/Kuala_Lumpur).
+ * Uses admin client for INSERT so it works when staff load the dashboard (RLS allows only admin/pic to insert).
  */
 export async function ensureTasksForToday(): Promise<void> {
   const today = getTodayAppDate();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: templates } = await supabase
     .from("task_templates")
     .select("id, assign_to_type, assign_to_id, is_active, start_date, end_date, recurrence_type, recurrence_value")
@@ -74,7 +76,7 @@ export async function generateTasksForToday(
   if (start && start > today) return;
   if (end && end < today) return;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let assigneeIds: string[] = [];
 
   if (assignToType === "user") {
