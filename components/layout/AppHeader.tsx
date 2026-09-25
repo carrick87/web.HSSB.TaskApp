@@ -13,10 +13,11 @@ export async function AppHeader() {
       { href: "/tasks/history", label: "History" },
       { href: "/profile", label: "Profile" },
     ];
+    links.push({ href: "/pm", label: "Projects" });
     if (profile.role === "pic" || profile.role === "admin") {
       links.push({ href: "/pic/dashboard", label: "PIC" });
       links.push({ href: "/pic/verify", label: "Verify" });
-      links.push({ href: "/pic/templates", label: "Task manager" });
+      links.push({ href: "/pic/templates", label: "Templates" });
       links.push({ href: "/pic/reports", label: "Reports" });
     }
     if (profile.role === "admin") {
