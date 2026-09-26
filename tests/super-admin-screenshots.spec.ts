@@ -23,14 +23,16 @@ const BASE =
 async function initShare(page: Page) {
   if (!SHARE) return;
   const origin = new URL(BASE).origin;
-  await page.goto(`${origin}/?_vercel_share=${SHARE}`, {
-    waitUntil: "domcontentloaded",
+  await page.goto(`${origin}/login?_vercel_share=${SHARE}`, {
+    waitUntil: "networkidle",
     timeout: 60000,
   });
 }
 
 async function loginAdmin(page: Page) {
-  await page.goto(`${BASE.replace(/\/$/, "")}/login`, {
+  const origin = BASE.replace(/\/$/, "");
+  const shareQ = SHARE ? `?_vercel_share=${SHARE}` : "";
+  await page.goto(`${origin}/login${shareQ}`, {
     waitUntil: "networkidle",
     timeout: 60000,
   });
@@ -46,12 +48,14 @@ test.beforeAll(() => {
 
 test("super admin UI screenshots", async ({ page }) => {
   await initShare(page);
-  await page.goto(`${BASE.replace(/\/$/, "")}/login`, { waitUntil: "networkidle" });
+  const origin = BASE.replace(/\/$/, "");
+  const shareQ = SHARE ? `?_vercel_share=${SHARE}` : "";
+  await page.goto(`${origin}/login${shareQ}`, { waitUntil: "networkidle" });
   await snap(page, "login-branding-390.png", 390, 844);
   await page.goto(`${BASE.replace(/\/$/, "")}/login`, { waitUntil: "networkidle" });
   await snap(page, "login-branding-1920.png", 1920, 1080);
 
-  test.skip(!process.env.SUPABASE_SERVICE_ROLE_KEY && !SHARE, "Needs service role (local) or Vercel preview with share token");
+  test.skip(!SHARE && !process.env.SUPABASE_SERVICE_ROLE_KEY, "Needs VERCEL_SHARE_TOKEN or SUPABASE_SERVICE_ROLE_KEY");
 
   await loginAdmin(page);
 
@@ -68,6 +72,6 @@ test("super admin UI screenshots", async ({ page }) => {
   await snap(page, "user-management-1920.png", 1920, 1080);
 
   await page.getByRole("button", { name: "Add user" }).click();
-  await expect(page.getByText("Add user")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add user" })).toBeVisible();
   await snap(page, "add-user-form-390.png", 390, 844);
 });
