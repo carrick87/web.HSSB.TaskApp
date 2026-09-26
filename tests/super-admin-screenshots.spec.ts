@@ -78,16 +78,19 @@ test("super admin UI screenshots", async ({ page }) => {
 
   const roleSelect = page.locator("tbody select").first();
   if (await roleSelect.count()) {
-    await roleSelect.selectOption("manager");
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5000 }).catch(() => undefined);
-    if (await page.getByRole("dialog").isVisible()) {
+    const firstValue = await roleSelect.inputValue();
+    const target = firstValue === "super_admin" ? "manager" : "super_admin";
+    await roleSelect.selectOption(target);
+    const dialog = page.getByRole("dialog");
+    if (await dialog.isVisible().catch(() => false)) {
       await snap(page, "role-change-confirm-390.png", 390, 844);
       await page.getByRole("button", { name: "Cancel" }).click();
+      await roleSelect.selectOption(firstValue);
     }
   }
 
   const deactivateBtn = page.getByRole("button", { name: "Deactivate" }).first();
-  if (await deactivateBtn.isDisabled()) {
+  if (await deactivateBtn.isDisabled().catch(() => false)) {
     await snap(page, "last-super-admin-greyed-390.png", 390, 844);
   }
 });
