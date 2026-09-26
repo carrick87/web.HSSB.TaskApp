@@ -39,12 +39,12 @@ export function DepartmentsForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Department name"
-        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 w-48"
+        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 w-48"
       />
       <select
         value={branchId}
         onChange={(e) => setBranchId(e.target.value)}
-        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 w-48"
+        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 w-48"
       >
         <option value="">Branch</option>
         {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}

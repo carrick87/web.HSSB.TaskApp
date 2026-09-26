@@ -15,8 +15,8 @@ export async function AppLayout({
         role={profile.role}
       />
       
-      <main className="lg:pl-60">
-        <div className="min-h-screen">
+      <main className="lg:pl-60 pt-14 lg:pt-0" style={{ paddingTop: 'max(3.5rem, env(safe-area-inset-top, 0px))' }}>
+        <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </div>
       </main>

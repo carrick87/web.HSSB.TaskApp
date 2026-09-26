@@ -41,7 +41,7 @@ export default async function PicVerifyListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-2xl font-bold text-neutral-1000">
         Pending Verification
       </h1>
       <Card>
@@ -50,11 +50,11 @@ export default async function PicVerifyListPage() {
         </CardHeader>
         <CardContent>
           {!tasks?.length ? (
-            <p className="text-slate-500 dark:text-slate-400">
+            <p className="text-neutral-600">
               No tasks awaiting verification.
             </p>
           ) : (
-            <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+            <ul className="divide-y divide-neutral-200">
               {tasks.map((t: { id: string; submitted_at: string; template: unknown; assignee: unknown }) => {
                 const title = Array.isArray(t.template) ? (t.template[0] as { title?: string })?.title : (t.template as { title?: string })?.title;
                 const username = Array.isArray(t.assignee) ? (t.assignee[0] as { username?: string })?.username : (t.assignee as { username?: string })?.username;
@@ -64,18 +64,18 @@ export default async function PicVerifyListPage() {
                     <div>
                       <Link
                         href={`/pic/verify/${t.id}`}
-                        className="font-medium text-slate-900 dark:text-slate-100 hover:underline"
+                        className="font-medium text-neutral-1000 hover:underline"
                       >
                         {title ?? "Task"}
                       </Link>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-sm text-neutral-600">
                         {username ?? "—"} · Submitted{" "}
                         {new Date(t.submitted_at).toLocaleString()}
                       </p>
                     </div>
                     <Link
                       href={`/pic/verify/${t.id}`}
-                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-sm font-medium text-brand-700 hover:underline"
                     >
                       Review
                     </Link>

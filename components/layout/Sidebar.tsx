@@ -245,7 +245,8 @@ export function Sidebar({
       {/* Mobile menu button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-40 p-2 rounded-atlassian bg-white shadow-atlassian text-neutral-600 hover:bg-neutral-50"
+        className="lg:hidden fixed z-40 p-2 rounded-atlassian bg-white shadow-atlassian text-neutral-600 hover:bg-neutral-50"
+        style={{ top: 'max(0.75rem, env(safe-area-inset-top, 0px))', left: 'max(0.75rem, env(safe-area-inset-left, 0px))' }}
         aria-label="Open menu"
       >
         <MenuIcon />
@@ -264,6 +265,7 @@ export function Sidebar({
         className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-neutral-200 transform transition-transform duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-neutral-200">
           <Link href="/dashboard" className="flex items-center gap-2">

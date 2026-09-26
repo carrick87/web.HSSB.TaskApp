@@ -64,7 +64,7 @@ export default async function TaskDetailPage({
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard"
-          className="text-slate-600 dark:text-slate-400 hover:underline text-sm"
+          className="text-neutral-600 hover:underline text-sm"
         >
           ← Back to dashboard
         </Link>
@@ -75,7 +75,7 @@ export default async function TaskDetailPage({
             <div>
               <CardTitle>{taskTitle ?? "Task"}</CardTitle>
               {taskDesc && (
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-sm text-neutral-600 mt-1">
                   {taskDesc}
                 </p>
               )}
@@ -84,14 +84,14 @@ export default async function TaskDetailPage({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-neutral-600">
             Due: {new Date(t.due_date).toLocaleString()}
             {t.is_late && (
-              <span className="ml-2 text-amber-600 dark:text-amber-400">(Late)</span>
+              <span className="ml-2 text-atlassian-yellow">(Late)</span>
             )}
           </p>
           {t.status === "rejected" && t.pic_comment && (
-            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-200">
+            <div className="rounded-lg bg-atlassian-red-light p-3 text-sm text-atlassian-red">
               <strong>PIC comment:</strong> {t.pic_comment}
             </div>
           )}

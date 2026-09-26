@@ -28,8 +28,9 @@ export const viewport: Viewport = {
   themeColor: "#0052CC",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
 };
 
 function ServiceWorkerRegistration() {
@@ -60,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: "light" }}>
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -69,8 +70,9 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#0052CC" />
         <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="color-scheme" content="light" />
       </head>
-      <body className="antialiased min-h-screen">
+      <body className="antialiased min-h-screen bg-neutral-100 text-neutral-1000">
         {children}
         <ServiceWorkerRegistration />
       </body>

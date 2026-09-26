@@ -30,7 +30,7 @@ export function ReportsForm({
   return (
     <div className="space-y-4 max-w-md">
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Branch
         </label>
         <select
@@ -39,7 +39,7 @@ export function ReportsForm({
             setBranchId(e.target.value);
             setDepartmentId("");
           }}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+          className="atlassian-input text-neutral-1000"
         >
           <option value="">All</option>
           {branches.map((b) => (
@@ -48,13 +48,13 @@ export function ReportsForm({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Department
         </label>
         <select
           value={departmentId}
           onChange={(e) => setDepartmentId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+          className="atlassian-input text-neutral-1000"
         >
           <option value="">All</option>
           {departments.map((d) => (
@@ -64,25 +64,25 @@ export function ReportsForm({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Start date
           </label>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             End date
           </label>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           />
         </div>
       </div>

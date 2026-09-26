@@ -22,10 +22,10 @@ export default async function AdminEditUserPage({
 
   return (
     <div className="space-y-6 max-w-lg">
-      <Link href="/admin/users" className="text-sm text-slate-600 dark:text-slate-400 hover:underline">
+      <Link href="/admin/users" className="text-sm text-neutral-600 hover:underline">
         ← Back to users
       </Link>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-2xl font-bold text-neutral-1000">
         Edit user
       </h1>
       <EditUserForm

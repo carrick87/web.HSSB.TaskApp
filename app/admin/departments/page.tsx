@@ -13,7 +13,7 @@ export default async function AdminDepartmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-2xl font-bold text-neutral-1000">
         Departments
       </h1>
       <Card>
@@ -21,7 +21,7 @@ export default async function AdminDepartmentsPage() {
           <CardTitle>All departments</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="divide-y divide-slate-200 dark:divide-slate-700 mb-6">
+          <ul className="divide-y divide-neutral-200 mb-6">
             {(departments ?? []).map((d) => (
               <DepartmentRow key={d.id} department={d} branches={branches ?? []} />
             ))}

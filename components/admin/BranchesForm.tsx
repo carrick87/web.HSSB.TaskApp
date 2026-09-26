@@ -33,7 +33,7 @@ export function BranchesForm() {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="New branch name"
-        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 flex-1"
+        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 flex-1"
       />
       <Button type="submit" disabled={loading || !name.trim()}>{loading ? "Adding…" : "Add"}</Button>
     </form>

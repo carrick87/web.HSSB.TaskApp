@@ -54,37 +54,37 @@ export default async function PicDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-2xl font-bold text-neutral-1000">
         PIC Dashboard
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Pending Verification</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-sm text-neutral-600">Pending Verification</p>
+            <p className="text-2xl font-bold text-neutral-1000">
               {pendingVerification}
             </p>
-            <Link href="/pic/verify" className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block">
+            <Link href="/pic/verify" className="text-sm text-brand-700 hover:underline mt-1 inline-block">
               Review →
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Verified Today</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{verifiedToday}</p>
+            <p className="text-sm text-neutral-600">Verified Today</p>
+            <p className="text-2xl font-bold text-neutral-1000">{verifiedToday}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Late Submissions Today</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{lateToday}</p>
+            <p className="text-sm text-neutral-600">Late Submissions Today</p>
+            <p className="text-2xl font-bold text-neutral-1000">{lateToday}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Overall Completion Rate</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{completionRate}%</p>
+            <p className="text-sm text-neutral-600">Overall Completion Rate</p>
+            <p className="text-2xl font-bold text-neutral-1000">{completionRate}%</p>
           </CardContent>
         </Card>
       </div>

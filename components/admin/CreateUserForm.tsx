@@ -70,43 +70,43 @@ export function CreateUserForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username *</label>
+        <label className="atlassian-label">Username *</label>
         <input
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
           required
           minLength={3}
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email (Harrison, for recording)</label>
+        <label className="atlassian-label">Email (Harrison, for recording)</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={`name${EMAIL_SUFFIX}`}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password *</label>
+        <label className="atlassian-label">Password *</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
           required
           minLength={6}
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Role *</label>
+        <label className="atlassian-label">Role *</label>
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as "admin" | "pic" | "staff")}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
         >
           <option value="staff">Staff</option>
           <option value="pic">PIC</option>
@@ -114,22 +114,22 @@ export function CreateUserForm({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Branch</label>
+        <label className="atlassian-label">Branch</label>
         <select
           value={branchId}
           onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
         >
           <option value="">—</option>
           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+        <label className="atlassian-label">Department</label>
         <select
           value={departmentId}
           onChange={(e) => setDepartmentId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
         >
           <option value="">—</option>
           {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

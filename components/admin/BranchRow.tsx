@@ -59,14 +59,14 @@ export function BranchRow({
   }
 
   return (
-    <li className="py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+    <li className="py-2 flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 last:border-0">
       {editing ? (
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm flex-1 min-w-[120px]"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm flex-1 min-w-[120px]"
             autoFocus
           />
           <Button size="sm" onClick={handleSave} disabled={loading || !name.trim()}>
@@ -83,7 +83,7 @@ export function BranchRow({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-sm text-brand-700 hover:underline"
             >
               Edit
             </button>
@@ -91,7 +91,7 @@ export function BranchRow({
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+              className="text-sm text-atlassian-red hover:underline disabled:opacity-50"
             >
               Delete
             </button>

@@ -54,7 +54,7 @@ export function VerifyActions({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div className="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+    <div className="pt-4 border-t border-neutral-200 space-y-3">
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex flex-wrap gap-3">
         <Button
@@ -69,7 +69,7 @@ export function VerifyActions({ taskId }: { taskId: string }) {
             placeholder="Rejection comment (optional)"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm w-64"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm w-64"
           />
           <Button type="submit" variant="danger" disabled={!!loading}>
             {loading === "reject" ? "Rejecting…" : "Reject"}
