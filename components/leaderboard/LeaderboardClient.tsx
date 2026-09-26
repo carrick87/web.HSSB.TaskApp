@@ -66,8 +66,9 @@ export function LeaderboardClient({
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="atlassian-label">Period</label>
+              <label htmlFor="period" className="atlassian-label">Period</label>
               <select
+                id="period"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
                 className="atlassian-select w-28"
@@ -80,8 +81,9 @@ export function LeaderboardClient({
             {period === "month" && (
               <>
                 <div>
-                  <label className="atlassian-label">Month</label>
+                  <label htmlFor="month" className="atlassian-label">Month</label>
                   <input
+                    id="month"
                     type="number"
                     min={1}
                     max={12}
@@ -91,8 +93,9 @@ export function LeaderboardClient({
                   />
                 </div>
                 <div>
-                  <label className="atlassian-label">Year</label>
+                  <label htmlFor="year" className="atlassian-label">Year</label>
                   <input
+                    id="year"
                     type="number"
                     min={2020}
                     max={2030}
@@ -105,8 +108,9 @@ export function LeaderboardClient({
             )}
             {period === "year" && (
               <div>
-                <label className="atlassian-label">Year</label>
+                <label htmlFor="year-only" className="atlassian-label">Year</label>
                 <input
+                  id="year-only"
                   type="number"
                   min={2020}
                   max={2030}
@@ -119,8 +123,9 @@ export function LeaderboardClient({
           </div>
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="atlassian-label">Branch</label>
+              <label htmlFor="branch" className="atlassian-label">Branch</label>
               <select
+                id="branch"
                 value={branchId}
                 onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
                 className="atlassian-select w-40"
@@ -130,8 +135,9 @@ export function LeaderboardClient({
               </select>
             </div>
             <div>
-              <label className="atlassian-label">Department</label>
+              <label htmlFor="department" className="atlassian-label">Department</label>
               <select
+                id="department"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 className="atlassian-select w-40"
@@ -152,7 +158,7 @@ export function LeaderboardClient({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Rankings</CardTitle>
-          <span className="text-xs text-neutral-500 font-normal">{periodLabel}</span>
+          <span className="text-xs text-neutral-700 font-normal">{periodLabel}</span>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -181,7 +187,7 @@ export function LeaderboardClient({
                       {row.rank <= 3 ? (
                         <span className="text-lg">{MEDALS[row.rank - 1]}</span>
                       ) : (
-                        <span className="text-neutral-500">{row.rank}</span>
+                        <span className="text-neutral-700">{row.rank}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -205,7 +211,7 @@ export function LeaderboardClient({
           </div>
           {(!data.leaderboard?.length) && (
             <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500 text-sm">No data for this period.</p>
+              <p className="text-neutral-700 text-sm">No data for this period.</p>
             </div>
           )}
         </CardContent>

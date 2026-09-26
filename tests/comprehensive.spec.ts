@@ -1,9 +1,19 @@
-import { test, expect, Page, Browser } from '@playwright/test';
+import { test, expect, Page, Browser, BrowserContext } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const SCREENSHOTS_DIR = '/opt/cursor/artifacts/final';
+
+const SHARE_TOKEN = process.env.VERCEL_SHARE_TOKEN || '';
+
+async function initContext(context: BrowserContext): Promise<void> {
+  if (SHARE_TOKEN) {
+    const page = await context.newPage();
+    await page.goto(`/?_vercel_share=${SHARE_TOKEN}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.close();
+  }
+}
 
 const VIEWPORTS = {
   'desktop-1920': { width: 1920, height: 1080, name: 'Desktop Full HD' },
@@ -54,10 +64,11 @@ async function ensureDir(dir: string) {
 async function login(page: Page, username: string): Promise<boolean> {
   try {
     await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
-    await page.fill('input[name="login"]', username);
-    await page.fill('input[name="password"]', 'Demo1234!');
+    await page.waitForSelector('#login', { timeout: 10000 });
+    await page.fill('#login', username);
+    await page.fill('#password', 'Demo1234!');
     await page.click('button[type="submit"]');
-    await page.waitForURL('**/dashboard', { timeout: 15000 });
+    await page.waitForURL('**/dashboard', { timeout: 30000 });
     return true;
   } catch (e) {
     console.error(`Login failed for ${username}:`, e);
@@ -91,9 +102,10 @@ test.describe('Comprehensive Screenshot Tests', () => {
             isMobile: isPhone,
             hasTouch: isPhone,
           });
+          await initContext(context);
           const page = await context.newPage();
           
-          await page.goto('/login', { waitUntil: 'networkidle' });
+          await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
           await takeScreenshot(page, 'login', vpKey, colorScheme);
           await context.close();
         });
@@ -105,6 +117,7 @@ test.describe('Comprehensive Screenshot Tests', () => {
             isMobile: isPhone,
             hasTouch: isPhone,
           });
+          await initContext(context);
           const page = await context.newPage();
           
           const loggedIn = await login(page, 'demo_admin');
@@ -134,6 +147,7 @@ test.describe('Comprehensive Screenshot Tests', () => {
             isMobile: isPhone,
             hasTouch: isPhone,
           });
+          await initContext(context);
           const page = await context.newPage();
           
           const loggedIn = await login(page, 'demo_member1');
@@ -161,6 +175,7 @@ test.describe('Comprehensive Screenshot Tests', () => {
             const context = await browser.newContext({
               viewport: { width: vp.width, height: vp.height },
             });
+            await initContext(context);
             const page = await context.newPage();
             
             const loggedIn = await login(page, 'demo_manager');
@@ -196,6 +211,7 @@ test.describe('Comprehensive Screenshot Tests', () => {
               isMobile: true,
               hasTouch: true,
             });
+            await initContext(context);
             const page = await context.newPage();
             
             await page.addStyleTag({
@@ -246,6 +262,7 @@ test.describe('Accessibility Tests', () => {
       const context = await browser.newContext({
         viewport: { width: 1920, height: 1080 },
       });
+      await initContext(context);
       const page = await context.newPage();
 
       if (testPage.needsAuth) {
@@ -293,9 +310,10 @@ test('Offline page', async ({ browser }) => {
     isMobile: true,
     hasTouch: true,
   });
+  await initContext(context);
   const page = await context.newPage();
 
-  await page.goto('/offline.html', { waitUntil: 'networkidle' });
+  await page.goto('/offline.html', { waitUntil: 'networkidle', timeout: 30000 });
   await takeScreenshot(page, 'offline', 'phone-390', 'light');
 
   await context.close();

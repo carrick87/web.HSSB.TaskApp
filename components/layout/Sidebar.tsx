@@ -196,7 +196,7 @@ export function Sidebar({
         {sections.map((section, idx) => (
           <div key={idx} className="mb-4">
             {section.title && (
-              <h3 className="px-4 mb-2 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+              <h3 className="px-4 mb-2 text-[11px] font-bold text-neutral-700 uppercase tracking-wider">
                 {section.title}
               </h3>
             )}
@@ -213,7 +213,7 @@ export function Sidebar({
                         : "text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    <span className={active ? "text-brand-600" : "text-neutral-500"}>
+                    <span className={active ? "text-brand-600" : "text-neutral-600"}>
                       {item.icon}
                     </span>
                     {item.label}
@@ -232,7 +232,7 @@ export function Sidebar({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-900 truncate">{username}</p>
-            <p className="text-xs text-neutral-500 capitalize">{role}</p>
+            <p className="text-xs text-neutral-700 capitalize">{role}</p>
           </div>
         </div>
         <LogoutButton />

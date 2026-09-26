@@ -101,7 +101,7 @@ export default function LoginForm() {
         <h1 className="text-2xl font-semibold text-neutral-1000 mb-1">
           TaskApp
         </h1>
-        <p className="text-neutral-600 text-sm">
+        <p className="text-neutral-700 text-sm">
           Harrison Sabah Sdn Bhd
         </p>
       </div>
@@ -114,7 +114,7 @@ export default function LoginForm() {
             className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
               mode === "signin"
                 ? "bg-white text-neutral-1000 shadow-atlassian-sm"
-                : "text-neutral-600 hover:text-neutral-900"
+                : "text-neutral-700 hover:text-neutral-900"
             }`}
           >
             Sign in
@@ -125,7 +125,7 @@ export default function LoginForm() {
             className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
               mode === "signup"
                 ? "bg-white text-neutral-1000 shadow-atlassian-sm"
-                : "text-neutral-600 hover:text-neutral-900"
+                : "text-neutral-700 hover:text-neutral-900"
             }`}
           >
             Sign up
