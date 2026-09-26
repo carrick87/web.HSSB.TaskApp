@@ -16,9 +16,9 @@ export async function AppLayout({
       />
       
       {/* Main content area */}
-      {/* Mobile: offset by sticky header (56px + safe-area-top) */}
-      {/* Desktop (lg:): offset by sidebar width (240px = pl-60), no header offset */}
-      <main className="main-content lg:pl-60 lg:pt-0">
+      {/* Mobile: offset by sticky header (56px + safe-area-top) via .main-content CSS */}
+      {/* Desktop (lg:): offset by sidebar width (240px) via .main-content CSS */}
+      <main className="main-content">
         <div className="min-h-screen px-4 pt-2 pb-4 lg:px-6 lg:py-6">
           {children}
         </div>

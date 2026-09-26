@@ -127,12 +127,12 @@
     padding-right: env(safe-area-inset-right, 0px);
   }
   
-  /* Desktop (lg:): sidebar is visible, no sticky header */
+  /* Desktop (lg:): sidebar is visible (240px = 15rem), no sticky header */
   @media (min-width: 1024px) {
     .main-content {
       padding-top: 0;
       padding-bottom: 16px;
-      padding-left: 0;
+      padding-left: 240px;
       padding-right: 0;
     }
   }
