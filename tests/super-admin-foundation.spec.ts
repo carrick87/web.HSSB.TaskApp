@@ -45,6 +45,14 @@ test.describe("company validation", () => {
       validateLogoUploadMeta({ type: "image/png", size: COMPANY_LOGO_MAX_BYTES + 1 }).error
     ).toBeTruthy();
   });
+
+  test("short name max length", () => {
+    const long = "a".repeat(31);
+    const result = validateCompanyPayload({ name: "Acme", short_name: long });
+    if ("data" in result) {
+      expect(result.data.short_name?.length).toBeLessThanOrEqual(30);
+    }
+  });
 });
 
 test.describe("UI role gating", () => {

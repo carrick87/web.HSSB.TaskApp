@@ -23,10 +23,40 @@ export function mergeCompanyProfile(row: Partial<CompanyProfile> | null): Compan
   };
 }
 
+/** Authenticated app shell: active organization branding. */
+export async function getActiveOrgCompanyProfile(): Promise<CompanyProfile> {
+  try {
+    const { getCurrentProfile } = await import("@/lib/auth");
+    const { getActiveOrganization, legacyOrgContext } = await import("@/lib/org/context");
+    const { organizationToCompanyProfile, productBrandAsCompanyProfile } = await import(
+      "@/lib/org/branding"
+    );
+    const profile = await getCurrentProfile();
+    if (!profile) return productBrandAsCompanyProfile();
+    const active = await getActiveOrganization(profile.id, profile.current_org_id ?? null);
+    if (active) return organizationToCompanyProfile(active.org);
+    return organizationToCompanyProfile(legacyOrgContext(profile).org);
+  } catch {
+    return { ...DEFAULT_COMPANY };
+  }
+}
+
 /** Public branding (login page, manifest, metadata). Uses anon-readable RLS. */
 export async function getPublicCompanyProfile(): Promise<CompanyProfile> {
+  const { productBrandAsCompanyProfile } = await import("@/lib/org/branding");
   try {
     const supabase = await createClient();
+    const { data: org } = await supabase
+      .from("organizations")
+      .select(
+        "name, short_name, logo_wide_path, logo_square_path, registration_no, address, phone, email, website"
+      )
+      .eq("slug", "hssb")
+      .eq("status", "active")
+      .maybeSingle();
+    if (org) {
+      return mergeCompanyProfile(org as Partial<CompanyProfile>);
+    }
     const { data } = await supabase
       .from("company_profile")
       .select(
@@ -34,10 +64,11 @@ export async function getPublicCompanyProfile(): Promise<CompanyProfile> {
       )
       .eq("id", COMPANY_ROW_ID)
       .maybeSingle();
-    return mergeCompanyProfile(data as Partial<CompanyProfile> | null);
+    if (data) return mergeCompanyProfile(data as Partial<CompanyProfile>);
   } catch {
-    return { ...DEFAULT_COMPANY };
+    /* tables may not exist pre-migration */
   }
+  return productBrandAsCompanyProfile();
 }
 
 /** Server-only read when RLS blocks (fallback). */

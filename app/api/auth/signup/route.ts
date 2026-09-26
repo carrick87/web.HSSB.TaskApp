@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const HARISON_EMAIL_SUFFIX = "@harrisons.com.my";
+import { ORG_ROLES } from "@/lib/org/roles";
 
 export async function POST(request: Request) {
   try {
@@ -17,11 +16,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (emailRaw && !emailRaw.endsWith(HARISON_EMAIL_SUFFIX)) {
-      return NextResponse.json(
-        { error: `Email must be a Harrison email (ending in ${HARISON_EMAIL_SUFFIX}).` },
-        { status: 400 }
-      );
+    if (emailRaw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
     if (!password || password.length < 6) {
       return NextResponse.json(
@@ -40,12 +36,6 @@ export async function POST(request: Request) {
     });
 
     if (createError) {
-      if (createError.message?.toLowerCase().includes("already registered")) {
-        return NextResponse.json(
-          { error: "This username may already exist. Try signing in or choose another username." },
-          { status: 400 }
-        );
-      }
       return NextResponse.json(
         { error: createError.message ?? "Could not create account." },
         { status: 400 }
@@ -53,10 +43,34 @@ export async function POST(request: Request) {
     }
 
     if (!authUser.user) {
-      return NextResponse.json(
-        { error: "Account could not be created." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Account could not be created." }, { status: 500 });
+    }
+
+    let needsOnboarding = true;
+    let currentOrgId: string | null = null;
+
+    if (emailRaw) {
+      try {
+        const { data: invite } = await admin
+          .from("organization_invites")
+          .select("org_id, role")
+          .eq("email", emailRaw)
+          .eq("status", "pending")
+          .maybeSingle();
+        if (invite) {
+          needsOnboarding = false;
+          currentOrgId = invite.org_id;
+          await admin.from("organization_members").insert({
+            org_id: invite.org_id,
+            user_id: authUser.user.id,
+            role: invite.role ?? ORG_ROLES.MEMBER,
+            status: "active",
+          });
+          await admin.from("organization_invites").update({ status: "accepted" }).eq("email", emailRaw);
+        }
+      } catch {
+        /* invites table not migrated yet */
+      }
     }
 
     const { error: profileError } = await admin.from("profiles").insert({
@@ -67,19 +81,14 @@ export async function POST(request: Request) {
       role: "user",
       branch_id: null,
       department_id: null,
+      current_org_id: currentOrgId,
     });
 
     if (profileError) {
       if (profileError.code === "23505") {
-        return NextResponse.json(
-          { error: "This username is already taken." },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "This username is already taken." }, { status: 400 });
       }
-      return NextResponse.json(
-        { error: profileError.message ?? "Could not create profile." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: profileError.message ?? "Could not create profile." }, { status: 500 });
     }
 
     const supabase = await createClient();
@@ -95,11 +104,8 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, needsOnboarding });
   } catch {
-    return NextResponse.json(
-      { error: "An error occurred. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "An error occurred. Please try again." }, { status: 500 });
   }
 }

@@ -1,9 +1,11 @@
 import Image from "next/image";
 import type { CompanyProfile } from "@/lib/company/constants";
 import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
+import { getOrgLogoPublicUrl } from "@/lib/org/logo-url";
 
 type BrandMarkProps = {
   company: CompanyProfile;
+  orgId?: string;
   size?: "sm" | "md" | "lg";
   showName?: boolean;
   nameClassName?: string;
@@ -19,6 +21,7 @@ const sizeMap = {
 
 export function BrandMark({
   company,
+  orgId,
   size = "md",
   showName = true,
   nameClassName = "font-semibold",
@@ -27,7 +30,9 @@ export function BrandMark({
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const path =
     logoVariant === "square" ? company.logo_square_path : company.logo_wide_path;
-  const logoUrl = getCompanyLogoPublicUrl(supabaseUrl, path);
+  const logoUrl = orgId
+    ? getOrgLogoPublicUrl(supabaseUrl, orgId, path)
+    : getCompanyLogoPublicUrl(supabaseUrl, path);
   const dims = sizeMap[size];
   const initials = (company.short_name || company.name || "TA").slice(0, 2).toUpperCase();
   const displayShort = company.short_name?.trim() || company.name;
@@ -82,6 +87,6 @@ export function BrandMark({
   );
 }
 
-export function BrandMarkCompact({ company }: { company: CompanyProfile }) {
-  return <BrandMark company={company} size="sm" showName={false} logoVariant="wide" />;
+export function BrandMarkCompact({ company, orgId }: { company: CompanyProfile; orgId?: string }) {
+  return <BrandMark company={company} orgId={orgId} size="sm" showName={false} logoVariant="wide" />;
 }

@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
-import { getPublicCompanyProfile } from "@/lib/company/profile";
+import { getActiveOrgCompanyProfile } from "@/lib/company/profile";
 import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
+import { getCurrentProfile } from "@/lib/auth";
+import { getActiveOrganization } from "@/lib/org/context";
+import { getOrgLogoPublicUrl } from "@/lib/org/logo-url";
 
 export async function GET() {
-  const company = await getPublicCompanyProfile();
+  const profile = await getCurrentProfile();
+  let company = await getActiveOrgCompanyProfile();
+  let orgId: string | undefined;
+  if (profile?.current_org_id) {
+    const active = await getActiveOrganization(profile.id, profile.current_org_id);
+    if (active) orgId = active.org.id;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const squareUrl = getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
+  const squareUrl = orgId
+    ? getOrgLogoPublicUrl(supabaseUrl, orgId, company.logo_square_path)
+    : getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
 
   const icons = squareUrl
     ? [
@@ -23,7 +35,7 @@ export async function GET() {
   return NextResponse.json({
     name: company.name,
     short_name: company.short_name || company.name,
-    description: company.tagline ?? "Internal task management",
+    description: company.tagline ?? "Task management for teams",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",

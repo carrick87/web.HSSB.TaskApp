@@ -1,9 +1,11 @@
 import type { CompanyProfile } from "@/lib/company/constants";
 import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
+import { getOrgLogoPublicUrl } from "@/lib/org/logo-url";
 import Image from "next/image";
 
 type Props = {
   company: Pick<CompanyProfile, "name" | "short_name" | "logo_wide_path">;
+  orgId?: string;
   /** Unsaved form values for live preview */
   previewName?: string;
   previewShortName?: string;
@@ -12,6 +14,7 @@ type Props = {
 
 export function MockTopBarPreview({
   company,
+  orgId,
   previewName,
   previewShortName,
   previewWidePath,
@@ -21,7 +24,9 @@ export function MockTopBarPreview({
   const shortName = previewShortName?.trim() || previewShortName === "" ? previewShortName : company.short_name;
   const displayShort = shortName?.trim() || name;
   const widePath = previewWidePath !== undefined ? previewWidePath : company.logo_wide_path;
-  const logoUrl = getCompanyLogoPublicUrl(supabaseUrl, widePath);
+  const logoUrl = orgId
+    ? getOrgLogoPublicUrl(supabaseUrl, orgId, widePath)
+    : getCompanyLogoPublicUrl(supabaseUrl, widePath);
   const initials = (shortName?.trim() || name || "TA").slice(0, 2).toUpperCase();
 
   return (

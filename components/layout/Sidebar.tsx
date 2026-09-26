@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import type { CompanyProfile } from "@/lib/company/constants";
 import { BrandMark, BrandMarkCompact } from "@/components/branding/BrandMark";
 import { LogoutButton } from "@/components/layout/LogoutButton";
-import { formatRoleLabel } from "@/lib/roles";
+import { formatOrgRoleLabel } from "@/lib/org/roles";
+import { ORG_ROLES, isOrgAdminRole, isOrgManagerOrAbove } from "@/lib/org/roles";
+import { OrgSwitcher } from "@/components/settings/OrgSwitcher";
 
 type NavItem = {
   href: string;
@@ -120,8 +122,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/pic/templates': 'Templates',
   '/pic/reports': 'Reports',
   '/admin': 'Admin',
-  '/admin/company': 'Company Profile',
-  '/admin/users': 'User Management',
+  '/settings/organization': 'Organization',
+  '/settings/members': 'Members',
+  '/settings/account': 'Account',
+  '/platform': 'Platform',
   '/admin/branches': 'Branches',
   '/admin/departments': 'Departments',
   '/admin/points': 'Points',
@@ -136,7 +140,7 @@ function getPageTitle(pathname: string): string {
   return 'TaskApp';
 }
 
-function getNavSections(role: string): NavSection[] {
+function getNavSections(orgRole: string, isPlatformAdmin: boolean): NavSection[] {
   const sections: NavSection[] = [
     {
       items: [
@@ -159,7 +163,7 @@ function getNavSections(role: string): NavSection[] {
     },
   ];
 
-  if (role === "manager" || role === "super_admin") {
+  if (isOrgManagerOrAbove(orgRole)) {
     sections[2].items.push(
       { href: "/pm/team", label: "Team Tasks", icon: <UsersIcon /> },
       { href: "/pm/projects", label: "All Projects", icon: <FolderIcon /> }
@@ -176,12 +180,12 @@ function getNavSections(role: string): NavSection[] {
     });
   }
 
-  if (role === "super_admin") {
+  if (isOrgAdminRole(orgRole)) {
     sections.push({
-      title: "Administration",
+      title: "Organization",
       items: [
-        { href: "/admin/company", label: "Company Profile", icon: <CogIcon /> },
-        { href: "/admin/users", label: "User Management", icon: <UsersIcon /> },
+        { href: "/settings/organization", label: "Organization", icon: <CogIcon /> },
+        { href: "/settings/members", label: "Members", icon: <UsersIcon /> },
         { href: "/admin", label: "Admin Panel", icon: <CogIcon /> },
       ],
     });
@@ -193,21 +197,41 @@ function getNavSections(role: string): NavSection[] {
     ],
   });
 
+  sections.push({
+    title: "Account",
+    items: [{ href: "/settings/account", label: "Account & privacy", icon: <UserIcon /> }],
+  });
+
+  if (isPlatformAdmin) {
+    sections.push({
+      title: "Platform",
+      items: [{ href: "/platform", label: "Platform admin", icon: <CogIcon /> }],
+    });
+  }
+
   return sections;
 }
 
 export function Sidebar({
   username,
-  role,
+  orgRole,
   company,
+  orgId,
+  currentOrgId,
+  organizations,
+  isPlatformAdmin,
 }: {
   username: string;
-  role: string;
+  orgRole: string;
   company: CompanyProfile;
+  orgId?: string;
+  currentOrgId: string;
+  organizations: { org_id: string; role: string; organizations: { id: string; name: string; short_name: string | null; slug: string } | null }[];
+  isPlatformAdmin: boolean;
 }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const sections = getNavSections(role);
+  const sections = getNavSections(orgRole, isPlatformAdmin);
   const pageTitle = getPageTitle(pathname);
 
   useEffect(() => {
@@ -233,6 +257,7 @@ export function Sidebar({
   const NavContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">
+        <OrgSwitcher organizations={organizations} currentOrgId={currentOrgId} />
         {sections.map((section, idx) => (
           <div key={idx} className="mb-4">
             {section.title && (
@@ -273,7 +298,7 @@ export function Sidebar({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate" style={{ color: '#172B4D' }}>{username}</p>
-            <p className="text-xs" style={{ color: '#44546F' }}>{formatRoleLabel(role)}</p>
+            <p className="text-xs" style={{ color: '#44546F' }}>{formatOrgRoleLabel(orgRole)}</p>
           </div>
         </div>
         <LogoutButton />
@@ -304,7 +329,7 @@ export function Sidebar({
             <MenuIcon />
           </button>
           <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <BrandMarkCompact company={company} />
+            <BrandMarkCompact company={company} orgId={orgId} />
           </Link>
           <span className="font-medium text-sm truncate" style={{ color: '#172B4D' }}>{pageTitle}</span>
         </div>
@@ -332,7 +357,7 @@ export function Sidebar({
       >
         <div className="flex items-center justify-between h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
           <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <BrandMark company={company} size="sm" />
+            <BrandMark company={company} size="sm" orgId={orgId} />
           </Link>
           <button
             onClick={() => setIsOpen(false)}
@@ -353,7 +378,7 @@ export function Sidebar({
       >
         <div className="flex items-center h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
           <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <BrandMark company={company} size="sm" />
+            <BrandMark company={company} size="sm" orgId={orgId} />
           </Link>
         </div>
         <NavContent />

@@ -15,7 +15,8 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
-  const [mode, setMode] = useState<Mode>("signin");
+  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -66,8 +67,8 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
       setError("Username is required (at least 2 characters).");
       return;
     }
-    if (signupEmail.trim() && !signupEmail.toLowerCase().trim().endsWith(HARISON_EMAIL_SUFFIX)) {
-      setError(`Email must be a Harrison email (ending in ${HARISON_EMAIL_SUFFIX}).`);
+    if (signupEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim())) {
+      setError("Enter a valid email address.");
       return;
     }
     if (!signupPassword || signupPassword.length < 6) {
@@ -91,7 +92,7 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
         setLoading(false);
         return;
       }
-      router.push(redirect);
+      router.push(data.needsOnboarding ? "/onboarding/create-org" : redirect);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -211,11 +212,11 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
                 type="email"
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
-                placeholder={`you${HARISON_EMAIL_SUFFIX}`}
+                placeholder="you@company.com"
                 className="atlassian-input"
                 autoComplete="email"
               />
-              <p className="mt-1.5 text-xs text-neutral-700">Harrison email only. For records; not used for login.</p>
+              <p className="mt-1.5 text-xs text-neutral-700">Used for invites and recovery. Sign-in uses your username.</p>
             </div>
             <div>
               <label htmlFor="signup-password" className="atlassian-label">
@@ -245,6 +246,11 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
             >
               {loading ? "Creating account…" : "Create account"}
             </button>
+            <p className="text-xs text-neutral-700 text-center">
+              By signing up you agree to our{" "}
+              <Link href="/terms" className="text-brand-700 hover:underline">Terms</Link> and{" "}
+              <Link href="/privacy" className="text-brand-700 hover:underline">Privacy</Link> (placeholders).
+            </p>
           </form>
         )}
       </div>
