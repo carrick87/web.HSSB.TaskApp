@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Replay Supabase migrations 001–017 on local PostgreSQL with minimal stubs.
+# Replay multitenant migrations on a production 005e baseline (schema snapshot + stubs).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DB_NAME="${DB_NAME:-taskapp_replay}"
 DB_USER="${DB_USER:-postgres}"
 export PGHOST="${PGHOST:-/var/run/postgresql}"
+BASELINE="${BASELINE:-$ROOT/supabase/snapshots/prod-005e-schema.sql}"
+STUBS="${STUBS:-$ROOT/supabase/snapshots/stubs-roles.sql}"
+AUTH_HELPERS="${AUTH_HELPERS:-$ROOT/supabase/snapshots/stubs-auth-helpers.sql}"
 
 log() { echo "[replay] $*"; }
 fail() { echo "[replay] FAIL: $*" >&2; exit 1; }
@@ -36,33 +39,40 @@ run_sql_inline() {
 }
 
 apply_migration() {
-  local num="$1"
-  local file="$2"
+  local file="$1"
+  local label="${2:-$(basename "$file")}"
   if [[ ! -f "$file" ]]; then fail "missing migration $file"; fi
-  if [[ "$(basename "$file")" == "001_initial_schema.sql" ]]; then
-    log "Applying 001 (pg_cron line filtered if needed) ..."
-    grep -v 'CREATE EXTENSION IF NOT EXISTS "pg_cron"' "$file" | sudo -u "$DB_USER" psql -v ON_ERROR_STOP=1 -d "$DB_NAME" >"/tmp/replay-001.log" 2>&1 || {
-      cat /tmp/replay-001.log >&2
-      fail "001_initial_schema"
-    }
-    pass "001_initial_schema"
-  else
-    run_sql "$(basename "$file")" "$file"
-  fi
+  run_sql "$label" "$file"
 }
 
 log "Ensuring PostgreSQL is running ..."
 sudo pg_ctlcluster 16 main start >/dev/null 2>&1 || true
 
+[[ -f "$BASELINE" ]] || fail "missing baseline snapshot $BASELINE"
+[[ -f "$STUBS" ]] || fail "missing stubs $STUBS"
+
 log "Recreating database $DB_NAME ..."
 sudo -u "$DB_USER" psql -c "DROP DATABASE IF EXISTS $DB_NAME;" postgres
 sudo -u "$DB_USER" psql -c "CREATE DATABASE $DB_NAME;" postgres
 
-run_sql "local_supabase_stubs" "$ROOT/supabase/tests/local_supabase_stubs.sql"
+run_sql "stubs" "$STUBS"
 
-for f in "$ROOT"/supabase/migrations/00{1,2,3,4,5}_*.sql; do
-  apply_migration "" "$f"
-done
+log "Loading production 005e baseline from $BASELINE ..."
+if grep -q '^\\restrict' "$BASELINE" 2>/dev/null; then
+  grep -v '^\\restrict' "$BASELINE" | grep -v '^\\unrestrict' | sudo -u "$DB_USER" psql -v ON_ERROR_STOP=1 -d "$DB_NAME" >"/tmp/replay-prod-baseline.log" 2>&1 || {
+    cat /tmp/replay-prod-baseline.log >&2
+    fail "prod-005e-schema (see /tmp/replay-prod-baseline.log)"
+  }
+else
+  run_sql "prod-005e-schema" "$BASELINE"
+fi
+pass "prod-005e-schema"
+
+run_sql "stubs-auth-helpers" "$AUTH_HELPERS"
+
+run_sql "prod-005e-buckets" "$ROOT/supabase/snapshots/prod-005e-buckets.sql"
+
+run_sql "fingerprint_pre_006" "$ROOT/supabase/snapshots/fingerprint.sql"
 
 run_sql "seed_production_shape" "$ROOT/supabase/tests/seed_production_shape.sql"
 
@@ -88,12 +98,12 @@ UNION ALL SELECT 'storage.objects', COUNT(*) FROM storage.objects;
 "
 
 for f in "$ROOT"/supabase/migrations/{006,007,008,009,010,011,012,013,014,015,016,017}_*.sql; do
-  apply_migration "" "$f"
+  apply_migration "$f"
 done
 
 log "Re-running migrations 006–017 (idempotency) ..."
 for f in "$ROOT"/supabase/migrations/{006,007,008,009,010,011,012,013,014,015,016,017}_*.sql; do
-  apply_migration "rerun-$(basename "$f")" "$f"
+  apply_migration "$f" "rerun-$(basename "$f")"
 done
 
 log "Post-migration counts and org_id checks:"
@@ -103,11 +113,6 @@ SELECT 'branches' t, COUNT(*) total, COUNT(*) FILTER (WHERE org_id IS NULL) null
 UNION ALL SELECT 'task_instances', COUNT(*), COUNT(*) FILTER (WHERE org_id IS NULL) FROM task_instances
 UNION ALL SELECT 'tasks', COUNT(*), COUNT(*) FILTER (WHERE org_id IS NULL) FROM tasks
 UNION ALL SELECT 'profiles', COUNT(*), COUNT(*) FILTER (WHERE current_org_id IS NULL) FROM profiles;
-"
-sudo -u "$DB_USER" psql -d "$DB_NAME" -c "
-SELECT 'task_instances' t, COUNT(*) FROM task_instances
-UNION ALL SELECT 'tasks', COUNT(*) FROM tasks
-UNION ALL SELECT 'profiles', COUNT(*) FROM profiles;
 "
 
 sudo -u "$DB_USER" psql -d "$DB_NAME" -c "
@@ -120,16 +125,14 @@ WHERE p.username IN ('admin','demo_admin','demo_manager','demo_member1','demo_me
 ORDER BY p.username;
 "
 
-HSSB_ID=$(sudo -u "$DB_USER" psql -tA -d "$DB_NAME" -c "SELECT id FROM organizations WHERE slug='hssb' LIMIT 1;")
-ADMIN_ID='78925121-0000-4000-8000-000000000001'
-
 run_sql_inline "assert_tenant_policies" "SELECT task_app.assert_tenant_policies_reference_org();"
 
 run_sql "tenant_rls_matrix" "$ROOT/supabase/tests/tenant_rls_matrix.sql"
 MATRIX_PASS=$(grep -o 'RLS_MATRIX_PASS=[0-9]*' /tmp/replay-tenant_rls_matrix.log 2>/dev/null | tail -1 | cut -d= -f2)
 MATRIX_FAIL=$(grep -o 'RLS_MATRIX_FAIL=[0-9]*' /tmp/replay-tenant_rls_matrix.log 2>/dev/null | tail -1 | cut -d= -f2)
-log "RLS matrix results: pass=${MATRIX_PASS:-18} fail=${MATRIX_FAIL:-0}"
+log "RLS matrix results: pass=${MATRIX_PASS:-?} fail=${MATRIX_FAIL:-0}"
+
 run_sql "replay_production_paths" "$ROOT/supabase/tests/replay_production_paths.sql"
 
 pass "All replay steps completed"
-echo "[replay] SUMMARY: migrations 001-017 applied, 006-017 re-run, RLS matrix + production paths OK"
+echo "[replay] SUMMARY: prod 005e baseline + seed, 006-017 x2, RLS matrix + production paths OK"

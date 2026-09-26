@@ -25,7 +25,7 @@ During the short window between migration and deploy, signup may still insert le
 6. `014`–`016` — notifications, email  
 7. `017_production_hardening.sql` — privilege guards, org_id triggers, policy audit  
 
-Local replay from repo baseline (`001`–`005` + seed): `bash scripts/replay-migrations.sh`.
+Local replay from production **005e** baseline: `bash scripts/replay-migrations.sh` (uses `supabase/snapshots/prod-005e-schema.sql` + seed, then `006`–`017` twice).
 
 ## Signup / roles
 

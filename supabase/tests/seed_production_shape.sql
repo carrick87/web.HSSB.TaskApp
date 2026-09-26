@@ -1,4 +1,4 @@
--- Production-shaped seed (run after 005, before 006). Idempotent via fixed UUIDs.
+-- Production-shaped seed (run after prod 005e baseline, before 006). Idempotent via fixed UUIDs.
 \set ON_ERROR_STOP on
 
 -- Fixed IDs
@@ -123,6 +123,13 @@ LIMIT 1;
 
 INSERT INTO public.task_user_stats (profile_id, total_completed, total_failed, total_late_submissions)
 VALUES ('78925121-0000-4000-8000-000000000005'::uuid, 3, 0, 1);
+
+INSERT INTO public.point_settings (event_type, points) VALUES
+  ('completed_on_time', 10),
+  ('completed_late', 5),
+  ('failed', 0),
+  ('not_completed', -5)
+ON CONFLICT (event_type) DO UPDATE SET points = EXCLUDED.points;
 
 INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
   ('task-attachments', 'c1000000-0000-0000-0000-000000000011/file-a.pdf', '78925121-0000-4000-8000-000000000001'),
