@@ -343,9 +343,9 @@ export function Sidebar({
         <NavContent />
       </aside>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar - lives in the grid's sidebar column, uses sticky positioning */}
       <aside
-        className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 w-60 bg-white"
+        className="desktop-sidebar hidden lg:flex flex-col bg-white"
         style={{ borderRight: '1px solid #DFE1E6' }}
       >
         <div className="flex items-center h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>

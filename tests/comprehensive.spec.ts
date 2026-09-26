@@ -320,7 +320,7 @@ test('Offline page', async ({ browser }) => {
 });
 
 test.describe('Layout Regression Tests', () => {
-  const desktopWidths = [820, 1024, 1280, 1366, 1920];
+  const desktopWidths = [820, 1024, 1280, 1366, 1440, 1920];
   
   for (const width of desktopWidths) {
     test(`Main content not covered by sidebar at ${width}px`, async ({ browser }) => {
@@ -339,17 +339,21 @@ test.describe('Layout Regression Tests', () => {
       await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(500);
 
-      const sidebar = page.locator('aside.lg\\:flex');
+      // Desktop sidebar uses .desktop-sidebar class
+      const sidebar = page.locator('aside.desktop-sidebar');
       const mainContent = page.locator('main.main-content');
 
       const sidebarVisible = await sidebar.isVisible();
       
-      if (width >= 1024 && sidebarVisible) {
+      // At 1024px and above, sidebar should be visible and content should not overlap
+      if (width >= 1024) {
+        expect(sidebarVisible, `Sidebar should be visible at ${width}px (lg breakpoint)`).toBe(true);
+        
         const sidebarBox = await sidebar.boundingBox();
         const mainBox = await mainContent.boundingBox();
 
-        expect(sidebarBox, 'Sidebar should be visible at lg breakpoint').not.toBeNull();
-        expect(mainBox, 'Main content should be visible').not.toBeNull();
+        expect(sidebarBox, 'Sidebar bounding box should exist').not.toBeNull();
+        expect(mainBox, 'Main content bounding box should exist').not.toBeNull();
 
         if (sidebarBox && mainBox) {
           expect(
@@ -357,6 +361,9 @@ test.describe('Layout Regression Tests', () => {
             `Main content left edge (${mainBox.x}) should be >= sidebar right edge (${sidebarBox.x + sidebarBox.width})`
           ).toBeGreaterThanOrEqual(sidebarBox.x + sidebarBox.width - 1);
         }
+      } else {
+        // Below 1024px, sidebar should be hidden (mobile drawer mode)
+        expect(sidebarVisible, `Desktop sidebar should be hidden at ${width}px`).toBe(false);
       }
 
       await context.close();
