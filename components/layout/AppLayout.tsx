@@ -15,8 +15,14 @@ export async function AppLayout({
         role={profile.role}
       />
       
-      <main className="lg:pl-60 pt-14 lg:pt-0" style={{ paddingTop: 'max(3.5rem, env(safe-area-inset-top, 0px))' }}>
-        <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
+      <main 
+        className="lg:pl-60"
+        style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)'
+        }}
+      >
+        <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6 lg:pt-6">
           {children}
         </div>
       </main>

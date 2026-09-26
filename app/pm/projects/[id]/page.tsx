@@ -38,31 +38,31 @@ function KanbanColumn({
           <Link
             key={task.id}
             href={`/pm/tasks/${task.id}`}
-            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors"
+            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors border border-neutral-200"
           >
             <p className="font-medium text-sm text-neutral-1000 line-clamp-2">
               {task.title}
             </p>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2.5 gap-2">
               {task.assignee && (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center text-[10px] font-semibold">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-semibold">
                     {task.assignee.username.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-[10px] text-neutral-500">{task.assignee.username}</span>
+                  <span className="text-xs text-neutral-600">{task.assignee.username}</span>
                 </div>
               )}
               <TaskPriorityBadge priority={task.priority} />
             </div>
             {task.due_date && (
-              <p className="text-[10px] text-neutral-500 mt-2">
+              <p className="text-xs text-neutral-600 mt-2 font-medium">
                 Due: {new Date(task.due_date).toLocaleDateString()}
               </p>
             )}
           </Link>
         ))}
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-16 text-xs text-neutral-500">
+          <div className="flex items-center justify-center h-16 text-sm text-neutral-600">
             No tasks
           </div>
         )}

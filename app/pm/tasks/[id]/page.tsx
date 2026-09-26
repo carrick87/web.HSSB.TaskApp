@@ -114,16 +114,17 @@ export default async function TaskDetailPage({
                   task.comments.map((comment) => (
                     <div
                       key={comment.id}
-                      className="p-3 bg-neutral-50 border border-neutral-200 rounded-atlassian"
+                      className="p-4 bg-neutral-50 border border-neutral-200 rounded-atlassian"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <span className="text-sm font-semibold text-neutral-1000">
                           {comment.author?.username ?? "Unknown"}
                         </span>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-neutral-600">
-                            {new Date(comment.created_at).toLocaleString()}
-                          </span>
+                          <time className="text-xs text-neutral-600 whitespace-nowrap">
+                            {new Date(comment.created_at).toLocaleDateString()}{" "}
+                            {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </time>
                           {(comment.author_id === profile.id || isAdmin) && (
                             <form action={handleDeleteComment}>
                               <input type="hidden" name="commentId" value={comment.id} />
@@ -137,14 +138,14 @@ export default async function TaskDetailPage({
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-neutral-800 whitespace-pre-wrap">
+                      <p className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">
                         {comment.content}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-neutral-600 text-sm">
-                    No comments yet.
+                  <p className="text-neutral-600 text-sm py-4 text-center">
+                    No comments yet. Be the first to add one.
                   </p>
                 )}
 

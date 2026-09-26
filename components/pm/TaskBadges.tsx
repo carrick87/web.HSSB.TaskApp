@@ -23,14 +23,14 @@ export function TaskStatusBadge({ status }: { status: TaskStatus2 }) {
 }
 
 const priorityClasses: Record<TaskPriority, string> = {
-  low: "text-atlassian-green",
-  medium: "text-atlassian-yellow",
-  high: "text-atlassian-red",
+  low: "bg-atlassian-green-light text-green-700 border border-green-200",
+  medium: "bg-atlassian-yellow-light text-yellow-700 border border-yellow-200",
+  high: "bg-atlassian-red-light text-red-700 border border-red-200",
 };
 
 const priorityIcons: Record<TaskPriority, string> = {
   low: "↓",
-  medium: "=",
+  medium: "→",
   high: "↑",
 };
 
@@ -43,11 +43,11 @@ const priorityLabels: Record<TaskPriority, string> = {
 export function TaskPriorityBadge({ priority }: { priority: TaskPriority }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs font-medium ${priorityClasses[priority]}`}
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-atlassian text-[11px] font-semibold ${priorityClasses[priority]}`}
       title={`${priorityLabels[priority]} priority`}
     >
-      <span className="text-sm font-bold">{priorityIcons[priority]}</span>
-      <span className="sr-only">{priorityLabels[priority]}</span>
+      <span className="font-bold">{priorityIcons[priority]}</span>
+      <span>{priorityLabels[priority]}</span>
     </span>
   );
 }
