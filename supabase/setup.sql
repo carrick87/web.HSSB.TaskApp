@@ -301,6 +301,12 @@ AS $$
   SELECT project_id FROM public.project_members WHERE profile_id = (SELECT auth.uid())
 $$;
 
+-- Rules:
+-- 1. Admin can view all tasks
+-- 2. Manager (pic) can view all tasks in their department
+-- 3. Manager (pic) can view private tasks where assignee is in their department
+-- 4. Project task: user is member of the project (NOT assignee/creator alone)
+-- 5. Private task: user is assignee or creator
 CREATE OR REPLACE FUNCTION private.can_view_task(p_task_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -334,10 +340,19 @@ BEGIN
     RETURN FALSE;
   END IF;
 
+  -- Manager can see all tasks in their department
   IF v_user_role = 'pic' AND v_task.department_id = v_user_dept THEN
     RETURN TRUE;
   END IF;
 
+  -- Manager can see private task if assignee is in their department
+  IF v_user_role = 'pic' AND v_task.project_id IS NULL THEN
+    IF (SELECT department_id FROM public.profiles WHERE id = v_task.assignee_id) = v_user_dept THEN
+      RETURN TRUE;
+    END IF;
+  END IF;
+
+  -- Project task: only project members (NOT assignee/creator alone)
   IF v_task.project_id IS NOT NULL THEN
     RETURN EXISTS (
       SELECT 1 FROM public.project_members
@@ -345,6 +360,7 @@ BEGIN
     );
   END IF;
 
+  -- Private task: user is assignee or creator
   IF v_task.assignee_id = v_user_id OR v_task.created_by = v_user_id THEN
     RETURN TRUE;
   END IF;
@@ -793,6 +809,12 @@ DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_update" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
 
+-- Rules:
+-- 1. Admin sees all
+-- 2. Manager sees all tasks in their department
+-- 3. Manager sees private tasks where assignee is in their department
+-- 4. Project task: only project members (NOT assignee/creator alone)
+-- 5. Private task: assignee or creator
 CREATE POLICY "tasks_select" ON public.tasks FOR SELECT TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
@@ -801,11 +823,18 @@ CREATE POLICY "tasks_select" ON public.tasks FOR SELECT TO authenticated
       AND department_id = (SELECT private.get_user_department_id())
     )
     OR (
+      (SELECT private.get_user_role()) = 'pic'
+      AND project_id IS NULL
+      AND (SELECT private.get_profile_department_id(assignee_id)) = (SELECT private.get_user_department_id())
+    )
+    OR (
       project_id IS NOT NULL
       AND project_id IN (SELECT private.get_user_project_ids())
     )
-    OR assignee_id = (SELECT auth.uid())
-    OR created_by = (SELECT auth.uid())
+    OR (
+      project_id IS NULL
+      AND (assignee_id = (SELECT auth.uid()) OR created_by = (SELECT auth.uid()))
+    )
   );
 CREATE POLICY "tasks_insert" ON public.tasks FOR INSERT TO authenticated
   WITH CHECK (
@@ -907,11 +936,11 @@ USING (
 );
 
 CREATE POLICY "task_files_update_own" ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'task-files' AND owner_id = auth.uid()::text)
-WITH CHECK (bucket_id = 'task-files' AND owner_id = auth.uid()::text);
+USING (bucket_id = 'task-files' AND owner = auth.uid())
+WITH CHECK (bucket_id = 'task-files' AND owner = auth.uid());
 
 CREATE POLICY "task_files_delete_own" ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id = 'task-files' AND owner_id = auth.uid()::text);
+USING (bucket_id = 'task-files' AND owner = auth.uid());
 
 -- New task-attachments bucket
 DROP POLICY IF EXISTS "task_attachments_storage_select" ON storage.objects;
