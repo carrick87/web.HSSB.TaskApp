@@ -5,9 +5,9 @@ import Link from "next/link";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
 
 export default async function TeamTasksPage() {
-  const profile = await requireRole(["admin", "pic"]);
+  const profile = await requireRole(["super_admin", "manager"]);
   
-  if (!profile.department_id && profile.role !== "admin") {
+  if (!profile.department_id && profile.role !== "super_admin") {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -24,7 +24,7 @@ export default async function TeamTasksPage() {
     );
   }
 
-  const tasks = profile.role === "admin" 
+  const tasks = profile.role === "super_admin" 
     ? await getTeamTasks("") 
     : await getTeamTasks(profile.department_id!);
 

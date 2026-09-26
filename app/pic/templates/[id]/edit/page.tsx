@@ -19,7 +19,7 @@ export default async function EditTemplatePage({
     .eq("id", id)
     .single();
   if (error || !template) notFound();
-  if (profile.role === "pic" && template.created_by_profile_id !== profile.id) {
+  if (profile.role === "manager" && template.created_by_profile_id !== profile.id) {
     notFound();
   }
 

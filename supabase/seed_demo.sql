@@ -295,10 +295,10 @@ BEGIN
   -- ==========================================================================
   INSERT INTO public.profiles (id, username, auth_email, branch_id, department_id, role)
   VALUES
-    (v_admin_id, 'demo_admin', 'admin@demo.taskapp.local', v_branch_id, v_dept_id, 'admin'),
-    (v_manager_id, 'demo_manager', 'manager@demo.taskapp.local', v_branch_id, v_dept_id, 'pic'),
-    (v_member1_id, 'demo_member1', 'member1@demo.taskapp.local', v_branch_id, v_dept_id, 'staff'),
-    (v_member2_id, 'demo_member2', 'member2@demo.taskapp.local', v_branch_id, v_dept_id, 'staff')
+    (v_admin_id, 'demo_admin', 'admin@demo.taskapp.local', v_branch_id, v_dept_id, 'super_admin'),
+    (v_manager_id, 'demo_manager', 'manager@demo.taskapp.local', v_branch_id, v_dept_id, 'manager'),
+    (v_member1_id, 'demo_member1', 'member1@demo.taskapp.local', v_branch_id, v_dept_id, 'user'),
+    (v_member2_id, 'demo_member2', 'member2@demo.taskapp.local', v_branch_id, v_dept_id, 'user')
   ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     auth_email = EXCLUDED.auth_email,

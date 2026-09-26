@@ -6,7 +6,7 @@ export default async function PicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["admin", "pic"]);
+  await requireRole(["super_admin", "manager"]);
   return (
     <AppLayout>
       <div>{children}</div>

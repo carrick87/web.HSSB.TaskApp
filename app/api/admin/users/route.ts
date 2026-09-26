@@ -1,30 +1,39 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedProfile } from "@/lib/admin/api-auth";
+import { writeAuditLog, isValidAppRole } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const EMAIL_SUFFIX = "@harrisons.com.my";
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET() {
+  const auth = await getAuthenticatedProfile();
+  if (auth instanceof NextResponse) return auth;
 
-  const { data: profile } = await supabase
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    .select(
+      "id, username, harrison_email, auth_email, role, status, last_sign_in_at, branch_id, department_id, branch:branches(name), department:departments(name)"
+    )
+    .order("username");
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ users: data ?? [] });
+}
+
+export async function POST(request: Request) {
+  const auth = await getAuthenticatedProfile();
+  if (auth instanceof NextResponse) return auth;
 
   const body = await request.json().catch(() => ({}));
   const { username, email, password, role, branch_id, department_id } = body;
-  const fullEmail = typeof email === "string" && email.trim()
-    ? (email.trim().toLowerCase().endsWith(EMAIL_SUFFIX)
+  const fullEmail =
+    typeof email === "string" && email.trim()
+      ? email.trim().toLowerCase().endsWith(EMAIL_SUFFIX)
         ? email.trim().toLowerCase()
-        : email.trim().toLowerCase().replace(/@.*$/, "") + EMAIL_SUFFIX)
-    : "";
+        : email.trim().toLowerCase().replace(/@.*$/, "") + EMAIL_SUFFIX
+      : "";
 
   if (!username?.trim() || username.trim().length < 3) {
     return NextResponse.json({ error: "Username required (min 3 chars)" }, { status: 400 });
@@ -35,7 +44,7 @@ export async function POST(request: Request) {
   if (!password || password.length < 6) {
     return NextResponse.json({ error: "Password required (min 6 chars)" }, { status: 400 });
   }
-  if (!["admin", "pic", "staff"].includes(role)) {
+  if (!isValidAppRole(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
@@ -54,19 +63,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not created" }, { status: 500 });
   }
 
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: authUser.user.id,
-    username: username.trim(),
-    auth_email,
-    harrison_email: fullEmail || null,
-    role,
-    branch_id: branch_id || null,
-    department_id: department_id || null,
-  });
+  const { data: created, error: profileError } = await admin
+    .from("profiles")
+    .insert({
+      id: authUser.user.id,
+      username: username.trim(),
+      auth_email,
+      harrison_email: fullEmail || null,
+      role,
+      status: "active",
+      branch_id: branch_id || null,
+      department_id: department_id || null,
+    })
+    .select("*")
+    .single();
 
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
+
+  await writeAuditLog({
+    actorId: auth.userId,
+    targetId: authUser.user.id,
+    action: "user.create",
+    after: created as Record<string, unknown>,
+  });
 
   return NextResponse.json({ id: authUser.user.id });
 }

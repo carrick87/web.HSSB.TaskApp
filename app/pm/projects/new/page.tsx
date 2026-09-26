@@ -7,7 +7,7 @@ import { ProjectNewForm } from "@/components/pm/ProjectNewForm";
 import type { Profile } from "@/types/database.types";
 
 export default async function NewProjectPage() {
-  const profile = await requireRole(["admin", "pic"]);
+  const profile = await requireRole(["super_admin", "manager"]);
 
   const supabase = await createClient();
   const { data: departments } = await supabase
@@ -22,7 +22,7 @@ export default async function NewProjectPage() {
 
   async function handleCreate(formData: FormData) {
     "use server";
-    const profile = await requireRole(["admin", "pic"]);
+    const profile = await requireRole(["super_admin", "manager"]);
 
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
@@ -61,7 +61,7 @@ export default async function NewProjectPage() {
             allMembers={(allMembers ?? []) as Profile[]}
             defaultDepartmentId={profile.department_id}
             currentUserId={profile.id}
-            isAdmin={profile.role === "admin"}
+            isAdmin={profile.role === "super_admin"}
             handleCreate={handleCreate}
           />
         </CardContent>

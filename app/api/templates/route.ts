@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" && profile?.role !== "pic") {
+  if (profile?.role !== "super_admin" && profile?.role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

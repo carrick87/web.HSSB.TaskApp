@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BrandMark } from "@/components/branding/BrandMark";
+import type { CompanyProfile } from "@/lib/company/constants";
+import { DEFAULT_COMPANY } from "@/lib/company/constants";
 
 const HARISON_EMAIL_SUFFIX = "@harrisons.com.my";
 
 type Mode = "signin" | "signup";
 
-export default function LoginForm() {
+export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: CompanyProfile }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
@@ -95,14 +98,14 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-[400px]">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-700 rounded-atlassian mb-4">
-          <span className="text-white font-bold text-2xl">HS</span>
+        <div className="flex justify-center mb-4">
+          <BrandMark company={company} size="lg" showName={false} />
         </div>
         <h1 className="text-2xl font-semibold text-neutral-1000 mb-1">
-          TaskApp
+          {company.name}
         </h1>
         <p className="text-neutral-700 text-sm">
-          Harrison Sabah Sdn Bhd
+          {company.tagline ?? DEFAULT_COMPANY.tagline}
         </p>
       </div>
 

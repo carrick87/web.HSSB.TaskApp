@@ -86,14 +86,14 @@ export async function generateTasksForToday(
       .from("profiles")
       .select("id")
       .eq("branch_id", assignToId)
-      .eq("role", "staff");
+      .eq("role", "user");
     assigneeIds = (data ?? []).map((p) => p.id);
   } else if (assignToType === "department") {
     const { data } = await supabase
       .from("profiles")
       .select("id")
       .eq("department_id", assignToId)
-      .eq("role", "staff");
+      .eq("role", "user");
     assigneeIds = (data ?? []).map((p) => p.id);
   }
 

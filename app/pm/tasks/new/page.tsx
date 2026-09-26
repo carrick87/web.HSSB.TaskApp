@@ -13,7 +13,7 @@ export default async function NewTaskPage({
   searchParams: Promise<{ project?: string }>;
 }) {
   const { project: projectId } = await searchParams;
-  const profile = await requireRole(["admin", "pic"]);
+  const profile = await requireRole(["super_admin", "manager"]);
 
   const supabase = await createClient();
   const { data: departments } = await supabase
@@ -30,7 +30,7 @@ export default async function NewTaskPage({
 
   async function handleCreate(formData: FormData) {
     "use server";
-    const profile = await requireRole(["admin", "pic"]);
+    const profile = await requireRole(["super_admin", "manager"]);
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -82,7 +82,7 @@ export default async function NewTaskPage({
             allMembers={(allMembers ?? []) as Profile[]}
             defaultDepartmentId={profile.department_id}
             defaultProjectId={projectId || null}
-            isAdmin={profile.role === "admin"}
+            isAdmin={profile.role === "super_admin"}
             handleCreate={handleCreate}
           />
         </CardContent>

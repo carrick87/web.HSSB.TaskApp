@@ -122,9 +122,9 @@ export function EditUserForm({
             onChange={(e) => setRole(e.target.value)}
             className="atlassian-input"
           >
-            <option value="staff">Staff</option>
-            <option value="pic">PIC</option>
-            <option value="admin">Admin</option>
+            <option value="user">User</option>
+            <option value="manager">Manager</option>
+            <option value="super_admin">Super Admin</option>
           </select>
         </div>
         <div>

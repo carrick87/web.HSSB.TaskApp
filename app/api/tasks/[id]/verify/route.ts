@@ -15,7 +15,7 @@ export async function POST(
     .select("role, branch_id, department_id")
     .eq("id", user.id)
     .single();
-  if (myProfile?.role !== "admin" && myProfile?.role !== "pic") {
+  if (myProfile?.role !== "super_admin" && myProfile?.role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -29,7 +29,7 @@ export async function POST(
     return NextResponse.json({ error: "Task is not submitted" }, { status: 400 });
   }
 
-  if (myProfile.role === "pic") {
+  if (myProfile.role === "manager") {
     const { data: assignee } = await supabase
       .from("profiles")
       .select("branch_id, department_id")

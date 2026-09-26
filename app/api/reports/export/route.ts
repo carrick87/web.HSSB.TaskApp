@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     .select("role, branch_id, department_id")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" && profile?.role !== "pic") {
+  if (profile?.role !== "super_admin" && profile?.role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     .order("assignment_date", { ascending: false })
     .limit(5000);
 
-  if (profile.role === "pic") {
+  if (profile.role === "manager") {
     const orFilters: string[] = [];
     if (profile.branch_id) orFilters.push(`branch_id.eq.${profile.branch_id}`);
     if (profile.department_id) orFilters.push(`department_id.eq.${profile.department_id}`);

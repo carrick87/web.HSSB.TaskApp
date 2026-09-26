@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       username,
       auth_email,
       harrison_email: emailRaw || null,
-      role: "staff",
+      role: "user",
       branch_id: null,
       department_id: null,
     });

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database.types";
+import { ROLES, type ProfileRole, LEGACY_ROLE_MAP, normalizeProfileRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 
 export async function getCurrentUser() {
@@ -19,7 +20,9 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     .eq("id", user.id)
     .single();
   if (error || !data) return null;
-  return data as unknown as Profile;
+  const row = data as Profile & { role: string };
+  const normalizedRole = normalizeProfileRole(row.role);
+  return { ...row, role: normalizedRole };
 }
 
 export async function requireAuth() {
@@ -31,15 +34,20 @@ export async function requireAuth() {
 export async function requireProfile() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login?redirect=" + encodeURIComponent("/dashboard"));
+  if (profile.status === "deactivated") {
+    redirect("/login?error=deactivated");
+  }
   return profile;
 }
 
-export async function requireRole(allowed: Array<"admin" | "pic" | "staff">) {
+export async function requireRole(allowed: ProfileRole[]) {
   const profile = await requireProfile();
   if (!allowed.includes(profile.role)) {
-    if (profile.role === "admin") redirect("/admin/users");
-    if (profile.role === "pic") redirect("/pic/dashboard");
+    if (profile.role === ROLES.SUPER_ADMIN) redirect("/admin/company");
+    if (profile.role === ROLES.MANAGER) redirect("/pic/dashboard");
     redirect("/dashboard");
   }
   return profile;
 }
+
+export { requireSuperAdmin } from "@/lib/admin/require-super-admin";

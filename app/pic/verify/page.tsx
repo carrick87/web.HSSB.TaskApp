@@ -24,7 +24,7 @@ export default async function PicVerifyListPage() {
     .eq("status", "submitted")
     .order("submitted_at", { ascending: true });
 
-  if (profile.role === "pic") {
+  if (profile.role === "manager") {
     const orFilters: string[] = [];
     if (profile.branch_id) orFilters.push(`branch_id.eq.${profile.branch_id}`);
     if (profile.department_id) orFilters.push(`department_id.eq.${profile.department_id}`);

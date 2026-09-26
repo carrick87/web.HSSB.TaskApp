@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
 
 export default async function ProjectsPage() {
-  await requireRole(["admin", "pic"]);
+  await requireRole(["super_admin", "manager"]);
   const projects = await getProjects();
 
   return (

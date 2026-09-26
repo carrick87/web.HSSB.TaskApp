@@ -55,7 +55,7 @@ export default async function PicVerifyDetailPage({
     );
   }
 
-  if (profile.role === "pic") {
+  if (profile.role === "manager") {
     const assigneeId = (task as { assignee_profile_id: string }).assignee_profile_id;
     const { data: assigneeProfileData } = await supabase
       .from("profiles")

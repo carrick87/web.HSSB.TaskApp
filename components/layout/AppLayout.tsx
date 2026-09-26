@@ -1,5 +1,6 @@
 import { requireProfile } from "@/lib/auth";
 import { Sidebar } from "./Sidebar";
+import { getPublicCompanyProfile } from "@/lib/company/profile";
 
 export async function AppLayout({
   children,
@@ -7,12 +8,14 @@ export async function AppLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireProfile();
+  const company = await getPublicCompanyProfile();
 
   return (
     <div className="app-shell">
       <Sidebar
         username={profile.username}
         role={profile.role}
+        company={company}
       />
       
       {/* Main content area */}

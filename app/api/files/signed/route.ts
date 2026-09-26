@@ -21,9 +21,9 @@ export async function GET(request: Request) {
       .select("role, branch_id, department_id")
       .eq("id", user.id)
       .single();
-    if (myProfile?.role === "admin") {
+    if (myProfile?.role === "super_admin") {
       // allow
-    } else if (myProfile?.role === "pic" && taskId) {
+    } else if (myProfile?.role === "manager" && taskId) {
       const { data: task } = await supabase
         .from("task_instances")
         .select("assignee_profile_id")

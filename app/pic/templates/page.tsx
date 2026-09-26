@@ -11,7 +11,7 @@ export default async function PicTemplatesPage() {
     .from("task_templates")
     .select("id, title, description, is_active, recurrence_type, created_at")
     .order("created_at", { ascending: false });
-  if (profile.role === "pic") {
+  if (profile.role === "manager") {
     query = query.eq("created_by_profile_id", profile.id);
   }
   const { data: templates } = await query;

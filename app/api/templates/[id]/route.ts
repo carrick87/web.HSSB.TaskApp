@@ -16,7 +16,7 @@ export async function PUT(
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin" && profile?.role !== "pic") {
+  if (profile?.role !== "super_admin" && profile?.role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -25,7 +25,7 @@ export async function PUT(
     .select("id, created_by_profile_id")
     .eq("id", id)
     .single();
-  if (existing.data && profile.role === "pic" && existing.data.created_by_profile_id !== user.id) {
+  if (existing.data && profile.role === "manager" && existing.data.created_by_profile_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!existing.data) {

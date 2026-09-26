@@ -17,7 +17,7 @@ export default async function PicDashboardPage() {
     .select("id, status, is_late, assignee_profile_id", { count: "exact" });
 
   let query = baseQuery;
-  if (profile.role === "pic") {
+  if (profile.role === "manager") {
     const orFilters: string[] = [];
     if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
     if (deptId) orFilters.push(`department_id.eq.${deptId}`);
@@ -32,13 +32,13 @@ export default async function PicDashboardPage() {
 
   const [pendingRes, verifiedTodayRes, lateRes, allRes] = await Promise.all([
     query.eq("status", "submitted").then((r) => r),
-    profile.role === "admin"
+    profile.role === "super_admin"
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("status", "verified").gte("verified_at", `${today}T00:00:00`)
       : query.eq("status", "verified").gte("verified_at", `${today}T00:00:00`).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "admin"
+    profile.role === "super_admin"
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("is_late", true).eq("assignment_date", today)
       : query.eq("is_late", true).eq("assignment_date", today).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "admin"
+    profile.role === "super_admin"
       ? supabase.from("task_instances").select("id, status", { count: "exact" })
       : query.select("id, status"),
   ]);

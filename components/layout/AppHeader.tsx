@@ -14,13 +14,13 @@ export async function AppHeader() {
       { href: "/profile", label: "Profile" },
     ];
     links.push({ href: "/pm", label: "Projects" });
-    if (profile.role === "pic" || profile.role === "admin") {
+    if (profile.role === "manager" || profile.role === "super_admin") {
       links.push({ href: "/pic/dashboard", label: "PIC" });
       links.push({ href: "/pic/verify", label: "Verify" });
       links.push({ href: "/pic/templates", label: "Templates" });
       links.push({ href: "/pic/reports", label: "Reports" });
     }
-    if (profile.role === "admin") {
+    if (profile.role === "super_admin") {
       links.push({ href: "/admin", label: "Admin" });
     }
     links.push({ href: "/leaderboard", label: "Leaderboard" });

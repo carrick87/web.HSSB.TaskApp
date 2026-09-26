@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogoutButton } from "./LogoutButton";
+import type { CompanyProfile } from "@/lib/company/constants";
+import { BrandMark, BrandMarkCompact } from "@/components/branding/BrandMark";
+import { LogoutButton } from "@/components/layout/LogoutButton";
+import { formatRoleLabel } from "@/lib/roles";
 
 type NavItem = {
   href: string;
@@ -117,7 +120,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/pic/templates': 'Templates',
   '/pic/reports': 'Reports',
   '/admin': 'Admin',
-  '/admin/users': 'Users',
+  '/admin/company': 'Company Profile',
+  '/admin/users': 'User Management',
   '/admin/branches': 'Branches',
   '/admin/departments': 'Departments',
   '/admin/points': 'Points',
@@ -155,7 +159,7 @@ function getNavSections(role: string): NavSection[] {
     },
   ];
 
-  if (role === "pic" || role === "admin") {
+  if (role === "manager" || role === "super_admin") {
     sections[2].items.push(
       { href: "/pm/team", label: "Team Tasks", icon: <UsersIcon /> },
       { href: "/pm/projects", label: "All Projects", icon: <FolderIcon /> }
@@ -172,10 +176,12 @@ function getNavSections(role: string): NavSection[] {
     });
   }
 
-  if (role === "admin") {
+  if (role === "super_admin") {
     sections.push({
       title: "Administration",
       items: [
+        { href: "/admin/company", label: "Company Profile", icon: <CogIcon /> },
+        { href: "/admin/users", label: "User Management", icon: <UsersIcon /> },
         { href: "/admin", label: "Admin Panel", icon: <CogIcon /> },
       ],
     });
@@ -193,9 +199,11 @@ function getNavSections(role: string): NavSection[] {
 export function Sidebar({
   username,
   role,
+  company,
 }: {
   username: string;
   role: string;
+  company: CompanyProfile;
 }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -265,7 +273,7 @@ export function Sidebar({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate" style={{ color: '#172B4D' }}>{username}</p>
-            <p className="text-xs capitalize" style={{ color: '#44546F' }}>{role}</p>
+            <p className="text-xs" style={{ color: '#44546F' }}>{formatRoleLabel(role)}</p>
           </div>
         </div>
         <LogoutButton />
@@ -295,10 +303,8 @@ export function Sidebar({
           >
             <MenuIcon />
           </button>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm">HS</span>
-            </div>
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+            <BrandMarkCompact company={company} />
           </Link>
           <span className="font-medium text-sm truncate" style={{ color: '#172B4D' }}>{pageTitle}</span>
         </div>
@@ -325,11 +331,8 @@ export function Sidebar({
         }}
       >
         <div className="flex items-center justify-between h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center">
-              <span className="text-white font-bold text-sm">HS</span>
-            </div>
-            <span className="font-semibold" style={{ color: '#172B4D' }}>TaskApp</span>
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+            <BrandMark company={company} size="sm" />
           </Link>
           <button
             onClick={() => setIsOpen(false)}
@@ -349,11 +352,8 @@ export function Sidebar({
         style={{ borderRight: '1px solid #DFE1E6' }}
       >
         <div className="flex items-center h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center">
-              <span className="text-white font-bold text-sm">HS</span>
-            </div>
-            <span className="font-semibold" style={{ color: '#172B4D' }}>TaskApp</span>
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+            <BrandMark company={company} size="sm" />
           </Link>
         </div>
         <NavContent />
