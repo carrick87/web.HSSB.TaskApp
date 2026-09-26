@@ -15,16 +15,11 @@ export async function AppLayout({
         role={profile.role}
       />
       
-      <main 
-        className="lg:pl-60"
-        style={{ 
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
-          paddingLeft: 'env(safe-area-inset-left, 0px)',
-          paddingRight: 'env(safe-area-inset-right, 0px)',
-        }}
-      >
-        <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6 lg:pt-6">
+      {/* Main content area */}
+      {/* Mobile: offset by sticky header (56px + safe-area-top) */}
+      {/* Desktop (lg:): offset by sidebar width (240px = pl-60), no header offset */}
+      <main className="main-content lg:pl-60 lg:pt-0">
+        <div className="min-h-screen px-4 pt-2 pb-4 lg:px-6 lg:py-6">
           {children}
         </div>
       </main>

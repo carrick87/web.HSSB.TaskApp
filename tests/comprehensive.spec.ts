@@ -318,3 +318,48 @@ test('Offline page', async ({ browser }) => {
 
   await context.close();
 });
+
+test.describe('Layout Regression Tests', () => {
+  const desktopWidths = [820, 1024, 1280, 1366, 1920];
+  
+  for (const width of desktopWidths) {
+    test(`Main content not covered by sidebar at ${width}px`, async ({ browser }) => {
+      const context = await browser.newContext({
+        viewport: { width, height: 900 },
+      });
+      await initContext(context);
+      const page = await context.newPage();
+      
+      const loggedIn = await login(page, 'demo_admin');
+      if (!loggedIn) {
+        test.skip();
+        return;
+      }
+
+      await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(500);
+
+      const sidebar = page.locator('aside.lg\\:flex');
+      const mainContent = page.locator('main.main-content');
+
+      const sidebarVisible = await sidebar.isVisible();
+      
+      if (width >= 1024 && sidebarVisible) {
+        const sidebarBox = await sidebar.boundingBox();
+        const mainBox = await mainContent.boundingBox();
+
+        expect(sidebarBox, 'Sidebar should be visible at lg breakpoint').not.toBeNull();
+        expect(mainBox, 'Main content should be visible').not.toBeNull();
+
+        if (sidebarBox && mainBox) {
+          expect(
+            mainBox.x,
+            `Main content left edge (${mainBox.x}) should be >= sidebar right edge (${sidebarBox.x + sidebarBox.width})`
+          ).toBeGreaterThanOrEqual(sidebarBox.x + sidebarBox.width - 1);
+        }
+      }
+
+      await context.close();
+    });
+  }
+});
