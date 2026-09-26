@@ -10,7 +10,7 @@ export default async function AdminLayout({
   await requireRole(["admin"]);
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 pt-16 lg:pt-6">
+      <div>
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="shrink-0 lg:w-52">
             <AdminNav />
