@@ -60,7 +60,7 @@ export default async function PicDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-neutral-600">Pending Verification</p>
+            <p className="text-sm text-neutral-700">Pending Verification</p>
             <p className="text-2xl font-bold text-neutral-1000">
               {pendingVerification}
             </p>
@@ -71,19 +71,19 @@ export default async function PicDashboardPage() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-neutral-600">Verified Today</p>
+            <p className="text-sm text-neutral-700">Verified Today</p>
             <p className="text-2xl font-bold text-neutral-1000">{verifiedToday}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-neutral-600">Late Submissions Today</p>
+            <p className="text-sm text-neutral-700">Late Submissions Today</p>
             <p className="text-2xl font-bold text-neutral-1000">{lateToday}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-neutral-600">Overall Completion Rate</p>
+            <p className="text-sm text-neutral-700">Overall Completion Rate</p>
             <p className="text-2xl font-bold text-neutral-1000">{completionRate}%</p>
           </CardContent>
         </Card>

@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-semibold text-neutral-1000">
             Dashboard
           </h1>
-          <p className="text-sm text-neutral-600 mt-0.5">
+          <p className="text-sm text-neutral-700 mt-0.5">
             Welcome back, {profile.username}
           </p>
         </div>
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
               Tasks Today
             </p>
             <p className="text-2xl font-bold text-neutral-1000 mt-1">
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
               Completed
             </p>
             <p className="text-2xl font-bold text-atlassian-green mt-1">
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
               Late
             </p>
             <p className="text-2xl font-bold text-atlassian-yellow mt-1">
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
               Points (Month)
             </p>
             <p className="text-2xl font-bold text-brand-700 mt-1">
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
         <CardContent className="p-0">
           {tasksRaw.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500 text-sm">
+              <p className="text-neutral-700 text-sm">
                 No tasks assigned for today.
               </p>
             </div>
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
                       {titleOf(task.template) || "Task"}
                     </p>
                     {descOf(task.template) && (
-                      <p className="text-sm text-neutral-500 truncate mt-0.5">
+                      <p className="text-sm text-neutral-700 truncate mt-0.5">
                         {descOf(task.template)}
                       </p>
                     )}

@@ -95,14 +95,14 @@ export function ProjectNewForm({
                 <span className="text-sm text-neutral-800">
                   {m.username}
                   {m.id === currentUserId && " (you)"}
-                  <span className="text-neutral-600 ml-1">
+                  <span className="text-neutral-700 ml-1">
                     ({m.role})
                   </span>
                 </span>
               </label>
             ))}
           </div>
-          <p className="text-xs text-neutral-600 mt-1">
+          <p className="text-xs text-neutral-700 mt-1">
             You will be added automatically as a member.
           </p>
         </div>

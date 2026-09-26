@@ -22,7 +22,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       link:
         "bg-transparent text-brand-700 hover:text-brand-800 hover:underline p-0",
       subtle:
-        "bg-transparent text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200",
+        "bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200",
     };
     
     const sizes = {

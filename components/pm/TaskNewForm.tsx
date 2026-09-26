@@ -138,7 +138,7 @@ export function TaskNewForm({
             </option>
           ))}
         </select>
-        <p className="text-xs text-neutral-600 mt-1">
+        <p className="text-xs text-neutral-700 mt-1">
           Private tasks are only visible to the assignee, you, and admins.
           Project tasks are visible to all project members.
         </p>

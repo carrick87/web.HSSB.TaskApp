@@ -107,7 +107,7 @@ export function EditUserForm({
             minLength={3}
           />
         </div>
-        <p className="text-sm text-neutral-600">Email (for recording):</p>
+        <p className="text-sm text-neutral-700">Email (for recording):</p>
         <input
           type="email"
           value={harrisonEmail}
@@ -158,7 +158,7 @@ export function EditUserForm({
 
       <form onSubmit={handleSetPassword} className="mt-8 p-4 rounded-lg border border-neutral-200 space-y-3">
         <h3 className="font-semibold text-neutral-900">Set new password</h3>
-        <p className="text-sm text-neutral-600">Only admins can set a new password for this user.</p>
+        <p className="text-sm text-neutral-700">Only admins can set a new password for this user.</p>
         <div>
           <label className="atlassian-label">New password</label>
           <input

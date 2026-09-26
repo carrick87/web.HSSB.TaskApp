@@ -64,7 +64,7 @@ export default async function TaskDetailPage({
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard"
-          className="text-neutral-600 hover:underline text-sm"
+          className="text-neutral-700 hover:underline text-sm"
         >
           ← Back to dashboard
         </Link>
@@ -75,7 +75,7 @@ export default async function TaskDetailPage({
             <div>
               <CardTitle>{taskTitle ?? "Task"}</CardTitle>
               {taskDesc && (
-                <p className="text-sm text-neutral-600 mt-1">
+                <p className="text-sm text-neutral-700 mt-1">
                   {taskDesc}
                 </p>
               )}
@@ -84,7 +84,7 @@ export default async function TaskDetailPage({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-neutral-700">
             Due: {new Date(t.due_date).toLocaleString()}
             {t.is_late && (
               <span className="ml-2 text-atlassian-yellow">(Late)</span>

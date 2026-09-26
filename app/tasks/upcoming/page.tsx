@@ -33,7 +33,7 @@ export default async function UpcomingTasksPage() {
         <h1 className="text-xl font-semibold text-neutral-1000">
           Upcoming Tasks
         </h1>
-        <p className="text-sm text-neutral-600 mt-0.5">
+        <p className="text-sm text-neutral-700 mt-0.5">
           Tasks scheduled for future dates
         </p>
       </div>
@@ -45,7 +45,7 @@ export default async function UpcomingTasksPage() {
         <CardContent className="p-0">
           {!tasks?.length ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500 text-sm">
+              <p className="text-neutral-700 text-sm">
                 No upcoming tasks scheduled.
               </p>
             </div>
@@ -63,7 +63,7 @@ export default async function UpcomingTasksPage() {
                       <p className="font-medium text-neutral-1000 text-sm">
                         {title ?? "Task"}
                       </p>
-                      <p className="text-xs text-neutral-500 mt-0.5">
+                      <p className="text-xs text-neutral-700 mt-0.5">
                         Due {new Date(t.due_date).toLocaleString()}
                       </p>
                     </div>

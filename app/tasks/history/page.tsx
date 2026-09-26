@@ -36,7 +36,7 @@ export default async function TaskHistoryPage() {
         <h1 className="text-xl font-semibold text-neutral-1000">
           Task History
         </h1>
-        <p className="text-sm text-neutral-600 mt-0.5">
+        <p className="text-sm text-neutral-700 mt-0.5">
           Past completed and failed tasks
         </p>
       </div>
@@ -48,7 +48,7 @@ export default async function TaskHistoryPage() {
         <CardContent className="p-0">
           {!tasks?.length ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500 text-sm">
+              <p className="text-neutral-700 text-sm">
                 No task history yet.
               </p>
             </div>
@@ -66,7 +66,7 @@ export default async function TaskHistoryPage() {
                       <p className="font-medium text-neutral-1000 text-sm">
                         {title ?? "Task"}
                       </p>
-                      <p className="text-xs text-neutral-500 mt-0.5">
+                      <p className="text-xs text-neutral-700 mt-0.5">
                         {new Date(t.assignment_date).toLocaleDateString()}
                         {t.submitted_at && ` · Submitted ${new Date(t.submitted_at).toLocaleString()}`}
                       </p>

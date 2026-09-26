@@ -60,7 +60,7 @@ export function AdminNav() {
               className={`inline-flex items-center gap-1.5 rounded-atlassian px-3 py-2 text-xs font-medium transition-colors ${
                 active
                   ? "bg-brand-50 text-brand-700"
-                  : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
               }`}
             >
               {icons[l.icon]}
@@ -79,7 +79,7 @@ export function AdminNav() {
               className={`flex items-center gap-2 rounded-atlassian px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-brand-50 text-brand-700"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                  : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
               }`}
             >
               <span className={active ? "text-brand-600" : "text-neutral-400"}>

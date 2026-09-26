@@ -131,7 +131,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
                   <p className="font-medium text-neutral-1000 truncate">
                     {attachment.file_name}
                   </p>
-                  <p className="text-xs text-neutral-600">
+                  <p className="text-xs text-neutral-700">
                     {formatFileSize(attachment.file_size)} •{" "}
                     {new Date(attachment.created_at).toLocaleDateString()}
                   </p>
@@ -156,7 +156,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-neutral-600 text-sm mb-4">
+          <p className="text-neutral-700 text-sm mb-4">
             No attachments yet.
           </p>
         )}
@@ -183,7 +183,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
                 {uploading ? "Uploading..." : "Upload File"}
               </Button>
             </label>
-            <p className="text-xs text-neutral-600 mt-2">
+            <p className="text-xs text-neutral-700 mt-2">
               Max file size: 10MB
             </p>
           </div>

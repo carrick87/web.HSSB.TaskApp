@@ -50,7 +50,7 @@ export default async function PicVerifyListPage() {
         </CardHeader>
         <CardContent>
           {!tasks?.length ? (
-            <p className="text-neutral-600">
+            <p className="text-neutral-700">
               No tasks awaiting verification.
             </p>
           ) : (
@@ -68,7 +68,7 @@ export default async function PicVerifyListPage() {
                       >
                         {title ?? "Task"}
                       </Link>
-                      <p className="text-sm text-neutral-600">
+                      <p className="text-sm text-neutral-700">
                         {username ?? "—"} · Submitted{" "}
                         {new Date(t.submitted_at).toLocaleString()}
                       </p>

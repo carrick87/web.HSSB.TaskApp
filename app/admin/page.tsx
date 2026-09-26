@@ -71,7 +71,7 @@ export default async function AdminDashboardPage() {
         <h1 className="text-xl font-semibold text-neutral-1000">
           Administration
         </h1>
-        <p className="text-sm text-neutral-600 mt-0.5">
+        <p className="text-sm text-neutral-700 mt-0.5">
           Manage users, branches, departments, and settings
         </p>
       </div>
@@ -91,12 +91,12 @@ export default async function AdminDashboardPage() {
                         {card.title}
                       </h3>
                       {card.count !== null && (
-                        <span className="text-xs text-neutral-500">
+                        <span className="text-xs text-neutral-700">
                           {card.count} {card.label}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-neutral-500 mt-1">
+                    <p className="text-xs text-neutral-700 mt-1">
                       {card.description}
                     </p>
                   </div>

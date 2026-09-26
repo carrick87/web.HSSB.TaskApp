@@ -35,5 +35,5 @@ export function CardDescription({
   className = "",
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={`text-sm text-neutral-600 mt-1 ${className}`} {...props} />;
+  return <p className={`text-sm text-neutral-700 mt-1 ${className}`} {...props} />;
 }

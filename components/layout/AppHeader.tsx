@@ -31,7 +31,7 @@ export async function AppHeader() {
           <Link
             key={l.href}
             href={l.href}
-            className="text-neutral-600 hover:text-neutral-900 text-sm font-medium"
+            className="text-neutral-700 hover:text-neutral-900 text-sm font-medium"
           >
             {l.label}
           </Link>
@@ -52,7 +52,7 @@ export async function AppHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-600">
+          <span className="text-sm text-neutral-700">
             {profile.username}
           </span>
           <form action={logout}>

@@ -138,7 +138,7 @@ export function TaskForm({
   if (status === "submitted" || status === "verified" || status === "failed") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-neutral-700">
           {status === "verified" && "This task has been verified."}
           {status === "submitted" && "Awaiting verification."}
           {status === "failed" && "This task was marked as failed."}
@@ -158,7 +158,7 @@ export function TaskForm({
               return (
                 <div key={q.id}>
                   <p className="text-sm font-medium text-neutral-800">{q.question_text}</p>
-                  <p className="text-sm text-neutral-600 mt-1">{value}</p>
+                  <p className="text-sm text-neutral-700 mt-1">{value}</p>
                 </div>
               );
             })}
@@ -242,7 +242,7 @@ export function TaskForm({
               <input
                 type="file"
                 accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx"
-                className="w-full text-sm text-neutral-600 file:mr-4 file:rounded file:border-0 file:bg-neutral-100 file:px-4 file:py-2 file:text-sm file:font-medium"
+                className="w-full text-sm text-neutral-700 file:mr-4 file:rounded file:border-0 file:bg-neutral-100 file:px-4 file:py-2 file:text-sm file:font-medium"
                 onChange={(e) =>
                   setFileForQuestion(q.id, e.target.files?.[0] ?? null)
                 }
@@ -265,7 +265,7 @@ export function TaskForm({
                 </div>
               )}
               {files[q.id] && !filePreviewUrls[q.id] && (
-                <p className="text-sm text-neutral-600">
+                <p className="text-sm text-neutral-700">
                   Selected: {files[q.id]?.name}
                 </p>
               )}

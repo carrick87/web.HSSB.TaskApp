@@ -208,7 +208,7 @@ export default function LoginForm() {
                 className="atlassian-input"
                 autoComplete="email"
               />
-              <p className="mt-1.5 text-xs text-neutral-500">Harrison email only. For records; not used for login.</p>
+              <p className="mt-1.5 text-xs text-neutral-700">Harrison email only. For records; not used for login.</p>
             </div>
             <div>
               <label htmlFor="signup-password" className="atlassian-label">
@@ -242,7 +242,7 @@ export default function LoginForm() {
         )}
       </div>
 
-      <p className="mt-6 text-center text-sm text-neutral-500">
+      <p className="mt-6 text-center text-sm text-neutral-700">
         <Link href="/" className="text-brand-700 hover:text-brand-800 hover:underline">
           Back to home
         </Link>

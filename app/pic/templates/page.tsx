@@ -23,7 +23,7 @@ export default async function PicTemplatesPage() {
           <h1 className="text-2xl font-bold text-neutral-1000">
             Task manager
           </h1>
-          <p className="text-sm text-neutral-600 mt-1">
+          <p className="text-sm text-neutral-700 mt-1">
             Create task templates and assign to users, branches, or departments. Tasks are generated daily from active templates.
           </p>
         </div>
@@ -40,7 +40,7 @@ export default async function PicTemplatesPage() {
         </CardHeader>
         <CardContent>
           {!templates?.length ? (
-            <p className="text-neutral-600">No templates yet.</p>
+            <p className="text-neutral-700">No templates yet.</p>
           ) : (
             <ul className="divide-y divide-neutral-200">
               {templates.map((t: { id: string; title: string; is_active: boolean; recurrence_type: string }) => (
@@ -52,7 +52,7 @@ export default async function PicTemplatesPage() {
                     >
                       {t.title}
                     </Link>
-                    <p className="text-sm text-neutral-600">
+                    <p className="text-sm text-neutral-700">
                       {t.is_active ? "Active" : "Inactive"} · {t.recurrence_type}
                     </p>
                   </div>

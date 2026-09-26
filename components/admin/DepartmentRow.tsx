@@ -102,7 +102,7 @@ export function DepartmentRow({
         <>
           <div className="flex items-center gap-3">
             <span>{department.name}</span>
-            <span className="text-neutral-600 text-sm">{branchName ?? "—"}</span>
+            <span className="text-neutral-700 text-sm">{branchName ?? "—"}</span>
           </div>
           <div className="flex items-center gap-2">
             <button

@@ -165,14 +165,14 @@ export function LeaderboardClient({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50">
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Rank</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Branch</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden md:table-cell">Department</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Points</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Done</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Late</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Failed</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Rank</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Name</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden sm:table-cell">Branch</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden md:table-cell">Department</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Points</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Done</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Late</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Failed</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,8 +198,8 @@ export function LeaderboardClient({
                         <span className="font-medium text-neutral-1000">{row.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 hidden sm:table-cell">{row.branch || "—"}</td>
-                    <td className="px-4 py-3 text-neutral-600 hidden md:table-cell">{row.department || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-700 hidden sm:table-cell">{row.branch || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-700 hidden md:table-cell">{row.department || "—"}</td>
                     <td className="px-4 py-3 text-right font-bold text-brand-700">{row.totalPoints}</td>
                     <td className="px-4 py-3 text-right text-atlassian-green hidden lg:table-cell">{row.completed}</td>
                     <td className="px-4 py-3 text-right text-atlassian-yellow hidden lg:table-cell">{row.late}</td>

@@ -15,7 +15,7 @@ export default async function HomePage() {
         <h1 className="text-3xl font-semibold text-neutral-1000 mb-2">
           TaskApp
         </h1>
-        <p className="text-neutral-600 mb-8 max-w-sm">
+        <p className="text-neutral-700 mb-8 max-w-sm">
           Internal task management system for Harrison Sabah Sdn Bhd
         </p>
         <Link

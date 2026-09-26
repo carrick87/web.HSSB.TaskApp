@@ -213,7 +213,7 @@ export function Sidebar({
                         : "text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    <span className={active ? "text-brand-600" : "text-neutral-600"}>
+                    <span className={active ? "text-brand-600" : "text-neutral-700"}>
                       {item.icon}
                     </span>
                     {item.label}
@@ -245,7 +245,7 @@ export function Sidebar({
       {/* Mobile menu button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed z-40 p-2 rounded-atlassian bg-white shadow-atlassian text-neutral-600 hover:bg-neutral-50"
+        className="lg:hidden fixed z-40 p-2 rounded-atlassian bg-white shadow-atlassian text-neutral-700 hover:bg-neutral-50"
         style={{ top: 'max(0.75rem, env(safe-area-inset-top, 0px))', left: 'max(0.75rem, env(safe-area-inset-left, 0px))' }}
         aria-label="Open menu"
       >
@@ -276,7 +276,7 @@ export function Sidebar({
           </Link>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1 text-neutral-500 hover:text-neutral-700"
+            className="p-1 text-neutral-700 hover:text-neutral-700"
             aria-label="Close menu"
           >
             <CloseIcon />

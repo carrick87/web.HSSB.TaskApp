@@ -49,7 +49,7 @@ export default async function PicVerifyDetailPage({
   if (task.status !== "submitted") {
     return (
       <div className="space-y-4">
-        <p className="text-neutral-600">This task is not awaiting verification.</p>
+        <p className="text-neutral-700">This task is not awaiting verification.</p>
         <Link href="/pic/verify" className="text-blue-600 hover:underline">Back to list</Link>
       </div>
     );
@@ -99,12 +99,12 @@ export default async function PicVerifyDetailPage({
       <Card>
         <CardHeader>
           <CardTitle>{taskTitle ?? "Task"}</CardTitle>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-neutral-700">
             Assignee: {assignee.username}
             {assignee.branchName && ` · ${assignee.branchName}`}
             {assignee.departmentName && ` · ${assignee.departmentName}`}
           </p>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-neutral-700">
             Submitted {task.submitted_at ? new Date(task.submitted_at).toLocaleString() : "—"}
             {task.is_late && <span className="text-atlassian-yellow ml-2">(Late)</span>}
           </p>
@@ -117,7 +117,7 @@ export default async function PicVerifyDetailPage({
                 <p className="font-medium text-neutral-800">
                   {q.question_text}
                 </p>
-                <p className="text-neutral-600 mt-1">
+                <p className="text-neutral-700 mt-1">
                   {answer?.answer_file_url ? (
                     <FileAnswerView path={answer.answer_file_url} />
                   ) : (

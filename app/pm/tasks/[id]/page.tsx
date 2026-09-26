@@ -95,7 +95,7 @@ export default async function TaskDetailPage({
                   {task.description}
                 </p>
               ) : (
-                <p className="text-neutral-500 italic">
+                <p className="text-neutral-700 italic">
                   No description provided.
                 </p>
               )}
@@ -121,7 +121,7 @@ export default async function TaskDetailPage({
                           {comment.author?.username ?? "Unknown"}
                         </span>
                         <div className="flex items-center gap-3">
-                          <time className="text-xs text-neutral-600 whitespace-nowrap">
+                          <time className="text-xs text-neutral-700 whitespace-nowrap">
                             {new Date(comment.created_at).toLocaleDateString()}{" "}
                             {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </time>
@@ -144,7 +144,7 @@ export default async function TaskDetailPage({
                     </div>
                   ))
                 ) : (
-                  <p className="text-neutral-600 text-sm py-4 text-center">
+                  <p className="text-neutral-700 text-sm py-4 text-center">
                     No comments yet. Be the first to add one.
                   </p>
                 )}
@@ -174,19 +174,19 @@ export default async function TaskDetailPage({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <span className="text-neutral-600 text-xs font-semibold uppercase tracking-wide">Assignee:</span>
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Assignee:</span>
                 <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.assignee?.username ?? "Unknown"}
                 </p>
               </div>
               <div>
-                <span className="text-neutral-600 text-xs font-semibold uppercase tracking-wide">Created by:</span>
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Created by:</span>
                 <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.creator?.username ?? "Unknown"}
                 </p>
               </div>
               <div>
-                <span className="text-neutral-600 text-xs font-semibold uppercase tracking-wide">Due date:</span>
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Due date:</span>
                 <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.due_date
                     ? new Date(task.due_date).toLocaleDateString()
@@ -194,7 +194,7 @@ export default async function TaskDetailPage({
                 </p>
               </div>
               <div>
-                <span className="text-neutral-600 text-xs font-semibold uppercase tracking-wide">Created:</span>
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Created:</span>
                 <p className="font-medium text-neutral-1000 mt-0.5">
                   {new Date(task.created_at).toLocaleString()}
                 </p>

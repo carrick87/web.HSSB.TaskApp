@@ -37,7 +37,7 @@ export function FileAnswerView({ path }: { path: string }) {
     return <span className="text-atlassian-red">{error}</span>;
   }
   if (!url) {
-    return <span className="text-neutral-600 animate-pulse">Loading…</span>;
+    return <span className="text-neutral-700 animate-pulse">Loading…</span>;
   }
 
   const isImage = IMAGE_EXT.test(path);

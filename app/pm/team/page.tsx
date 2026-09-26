@@ -16,7 +16,7 @@ export default async function TeamTasksPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <p className="text-neutral-600 text-sm">
+          <p className="text-neutral-700 text-sm">
             You are not assigned to a department. Please contact an admin.
           </p>
         </CardContent>
@@ -43,7 +43,7 @@ export default async function TeamTasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-neutral-1000">Team Tasks</h1>
-          <p className="text-sm text-neutral-600 mt-0.5">
+          <p className="text-sm text-neutral-700 mt-0.5">
             {tasks.length} task{tasks.length !== 1 ? "s" : ""} across {Object.keys(groupedByAssignee).length} team member{Object.keys(groupedByAssignee).length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -63,7 +63,7 @@ export default async function TeamTasksPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <p className="text-neutral-600 text-sm">
+            <p className="text-neutral-700 text-sm">
               No tasks in your team yet.
             </p>
           </CardContent>
@@ -78,7 +78,7 @@ export default async function TeamTasksPage() {
                 </div>
                 <div>
                   <CardTitle>{name}</CardTitle>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-neutral-700 mt-0.5">
                     {assigneeTasks.length} task{assigneeTasks.length !== 1 ? "s" : ""}
                   </p>
                 </div>
@@ -101,12 +101,12 @@ export default async function TeamTasksPage() {
                               {task.project.name}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-600">
+                            <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-700">
                               Private
                             </span>
                           )}
                           {task.due_date && (
-                            <span className="text-xs text-neutral-500">
+                            <span className="text-xs text-neutral-700">
                               Due: {new Date(task.due_date).toLocaleDateString()}
                             </span>
                           )}

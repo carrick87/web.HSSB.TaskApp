@@ -387,7 +387,7 @@ export function TemplateForm({
               </div>
               {q.answer_type === "choice" && (
                 <div className="text-sm">
-                  <p className="text-neutral-600 mb-1">Options (one per line)</p>
+                  <p className="text-neutral-700 mb-1">Options (one per line)</p>
                   <textarea
                     value={q.options.join("\n")}
                     onChange={(e) =>
