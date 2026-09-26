@@ -228,9 +228,21 @@ CREATE POLICY "task_files_select"
 
 CREATE POLICY "task_files_update_own"
   ON storage.objects FOR UPDATE TO authenticated
-  USING (bucket_id = 'task-files' AND COALESCE(owner, owner_id::uuid) = auth.uid())
-  WITH CHECK (bucket_id = 'task-files' AND COALESCE(owner, owner_id::uuid) = auth.uid());
+  USING (
+    bucket_id = 'task-files'
+    AND COALESCE(owner, owner_id::uuid) = auth.uid()
+    AND public.is_org_member(public.task_files_org_id(name))
+  )
+  WITH CHECK (
+    bucket_id = 'task-files'
+    AND COALESCE(owner, owner_id::uuid) = auth.uid()
+    AND public.is_org_member(public.task_files_org_id(name))
+  );
 
 CREATE POLICY "task_files_delete_own"
   ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id = 'task-files' AND COALESCE(owner, owner_id::uuid) = auth.uid());
+  USING (
+    bucket_id = 'task-files'
+    AND COALESCE(owner, owner_id::uuid) = auth.uid()
+    AND public.is_org_member(public.task_files_org_id(name))
+  );

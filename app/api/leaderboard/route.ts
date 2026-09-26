@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { filterUserIdsByOrgMembershipLocation } from "@/lib/org/membership-assignees";
+import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const orgId = await getActiveOrgIdForUser(supabase, user.id);
+  if (!orgId) return NextResponse.json({ error: "No active workspace" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const period = searchParams.get("period") || "month";
@@ -15,7 +20,8 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("user_points")
-    .select("profile_id, points_earned");
+    .select("profile_id, points_earned")
+    .eq("org_id", orgId);
 
   if (period === "month") {
     query = query.eq("month", month).eq("year", year);
@@ -32,12 +38,13 @@ export async function GET(request: Request) {
 
   let profileIds = Object.keys(byProfile);
   if (branchId || departmentId) {
-    let filterQuery = supabase.from("profiles").select("id");
-    if (branchId) filterQuery = filterQuery.eq("branch_id", branchId);
-    if (departmentId) filterQuery = filterQuery.eq("department_id", departmentId);
-    const { data: filtered } = await filterQuery;
-    const allowed = new Set((filtered ?? []).map((p) => p.id));
-    profileIds = profileIds.filter((id) => allowed.has(id));
+    profileIds = await filterUserIdsByOrgMembershipLocation(
+      supabase,
+      orgId,
+      profileIds,
+      branchId,
+      departmentId
+    );
   }
 
   const { data: stats } = await supabase

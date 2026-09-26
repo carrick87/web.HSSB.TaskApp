@@ -47,16 +47,26 @@ export async function GET(request: Request) {
     else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
   if (branchId) {
-    const { data: branchProfiles } = await supabase.from("profiles").select("id").eq("branch_id", branchId);
-    const ids = (branchProfiles ?? []).map((p) => p.id);
-    if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    const { data: branchMembers } = await supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("org_id", orgCtx.orgId)
+      .eq("status", "active")
+      .eq("branch_id", branchId);
+    const memberIds = (branchMembers ?? []).map((m) => m.user_id as string);
+    if (memberIds.length) query = query.in("assignee_profile_id", memberIds);
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
   if (departmentId) {
-    const { data: deptProfiles } = await supabase.from("profiles").select("id").eq("department_id", departmentId);
-    const ids = (deptProfiles ?? []).map((p) => p.id);
-    if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    const { data: deptMembers } = await supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("org_id", orgCtx.orgId)
+      .eq("status", "active")
+      .eq("department_id", departmentId);
+    const memberIds = (deptMembers ?? []).map((m) => m.user_id as string);
+    if (memberIds.length) query = query.in("assignee_profile_id", memberIds);
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
   if (startDate) query = query.gte("assignment_date", startDate);
   if (endDate) query = query.lte("assignment_date", endDate);

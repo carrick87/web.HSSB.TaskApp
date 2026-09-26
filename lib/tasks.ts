@@ -1,6 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTodayAppDate } from "@/lib/date";
+import {
+  listActiveMemberUserIdsByBranch,
+  listActiveMemberUserIdsByDepartment,
+} from "@/lib/org/membership-assignees";
 
 /**
  * Ensure today's task instances exist for all recurring templates that should run today.
@@ -77,24 +80,30 @@ export async function generateTasksForToday(
   if (end && end < today) return;
 
   const supabase = createAdminClient();
+  const { data: templateRow } = await supabase
+    .from("task_templates")
+    .select("org_id")
+    .eq("id", templateId)
+    .maybeSingle();
+
+  const orgId = templateRow?.org_id as string | undefined;
+  if (!orgId) return;
+
   let assigneeIds: string[] = [];
 
   if (assignToType === "user") {
-    assigneeIds = [assignToId];
+    const { data: membership } = await supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("org_id", orgId)
+      .eq("user_id", assignToId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (membership) assigneeIds = [assignToId];
   } else if (assignToType === "branch") {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("branch_id", assignToId)
-      .eq("role", "user");
-    assigneeIds = (data ?? []).map((p) => p.id);
+    assigneeIds = await listActiveMemberUserIdsByBranch(supabase, orgId, assignToId);
   } else if (assignToType === "department") {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("department_id", assignToId)
-      .eq("role", "user");
-    assigneeIds = (data ?? []).map((p) => p.id);
+    assigneeIds = await listActiveMemberUserIdsByDepartment(supabase, orgId, assignToId);
   }
 
   for (const assigneeProfileId of assigneeIds) {
@@ -104,6 +113,7 @@ export async function generateTasksForToday(
       assignment_date: today,
       due_date: dueDate,
       status: "pending",
+      org_id: orgId,
     });
     if (error && error.code !== "23505") {
       throw error;

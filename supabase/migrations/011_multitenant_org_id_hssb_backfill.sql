@@ -192,6 +192,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_point_settings_org_event ON public.point_s
 
 DROP FUNCTION IF EXISTS task_app._add_org_id(regclass);
 
+-- Align HSSB membership branch/department with legacy profiles (daily task generation parity at go-live).
+UPDATE public.organization_members om
+SET branch_id = p.branch_id,
+    department_id = p.department_id
+FROM public.profiles p
+WHERE om.user_id = p.id
+  AND om.org_id = (SELECT id FROM public.organizations WHERE slug = 'hssb' LIMIT 1);
+
 -- Finalize legacy profile roles for new app (safe after org memberships exist).
 UPDATE public.profiles SET role = 'super_admin' WHERE role = 'admin';
 UPDATE public.profiles SET role = 'manager' WHERE role = 'pic';

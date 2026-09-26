@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOrgApiContext } from "@/lib/org/api-auth";
+import { getAuthenticatedUserId } from "@/lib/org/authenticated-api";
+import { switchCurrentOrg } from "@/lib/org/workspace-access";
 
 export async function POST(request: Request) {
-  const ctx = await getOrgApiContext(false);
-  if (ctx instanceof NextResponse) return ctx;
+  const auth = await getAuthenticatedUserId();
+  if (auth instanceof NextResponse) return auth;
 
   const body = await request.json().catch(() => ({}));
   const orgId = body.org_id;
@@ -13,23 +14,10 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("org_id")
-    .eq("org_id", orgId)
-    .eq("user_id", ctx.userId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member of this organization" }, { status: 403 });
+  const result = await switchCurrentOrg(supabase, auth.userId, orgId);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error ?? "Forbidden" }, { status: 403 });
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ current_org_id: orgId })
-    .eq("id", ctx.userId);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, org_id: orgId });
 }

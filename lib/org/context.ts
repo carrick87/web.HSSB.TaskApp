@@ -7,6 +7,12 @@ import { PRODUCT_BRAND, type Organization } from "./constants";
 import { getCurrentUser } from "@/lib/auth";
 import { getTestAuthBypassUserId } from "@/lib/test-auth-bypass";
 import { isPlatformAdmin } from "@/lib/platform-admin";
+import {
+  fetchMyOrgStatus,
+  fetchMyWorkspaces,
+  pickAlternateActiveWorkspace,
+  switchCurrentOrg,
+} from "@/lib/org/workspace-access";
 
 export type { Organization };
 export { PRODUCT_BRAND };
@@ -47,18 +53,21 @@ export async function getUserOrganizations(userId: string) {
   }
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("organization_members")
-      .select("org_id, role, status, organizations(id, name, short_name, slug, status)")
-      .eq("user_id", userId)
-      .eq("status", "active");
-    return (data ?? []).filter(
-      (row) =>
-        row.organizations &&
-        typeof row.organizations === "object" &&
-        !Array.isArray(row.organizations) &&
-        (row.organizations as { status?: string }).status === "active"
-    );
+    const rows = await fetchMyWorkspaces(supabase);
+    return rows
+      .filter((w) => w.membership_status === "active" && w.org_status === "active")
+      .map((w) => ({
+        org_id: w.org_id,
+        role: w.membership_role,
+        status: w.membership_status,
+        organizations: {
+          id: w.org_id,
+          name: w.org_name,
+          short_name: w.org_short_name,
+          slug: "",
+          status: w.org_status,
+        },
+      }));
   } catch {
     return [];
   }
@@ -67,12 +76,22 @@ export async function getUserOrganizations(userId: string) {
 export async function getActiveOrganization(userId: string, currentOrgId: string | null) {
   const supabase = await createClient();
   if (!currentOrgId) return null;
+
+  const status = await fetchMyOrgStatus(supabase, currentOrgId);
+  if (
+    !status ||
+    status.org_status !== "active" ||
+    status.membership_status !== "active"
+  ) {
+    return null;
+  }
+
   const { data: org } = await supabase
     .from("organizations")
     .select("*")
     .eq("id", currentOrgId)
     .maybeSingle();
-  if (!org || org.status !== "active") return null;
+  if (!org) return null;
 
   const { data: membership } = await supabase
     .from("organization_members")
@@ -141,17 +160,6 @@ export async function requireOrgContext(): Promise<OrgContext> {
     .single();
 
   if (!profile) redirect("/login");
-  if (profile.status === "deactivated") {
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("organization_members")
-      .select("user_id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "active");
-    if ((count ?? 0) === 0) {
-      redirect("/login?error=deactivated");
-    }
-  }
 
   const platformAdminFlag = await isPlatformAdmin(supabase);
   const profileWithPlatform = {
@@ -159,38 +167,46 @@ export async function requireOrgContext(): Promise<OrgContext> {
     is_platform_admin: platformAdminFlag,
   };
 
+  const workspaces = await fetchMyWorkspaces(supabase);
+  const hasMemberships = workspaces.length > 0;
+
+  if (profile.status === "deactivated") {
+    const activeCount = workspaces.filter(
+      (w) => w.membership_status === "active" && w.org_status === "active"
+    ).length;
+    if (activeCount === 0) {
+      redirect("/login?error=deactivated");
+    }
+  }
+
   const active = await getActiveOrganization(user.id, profile.current_org_id);
   if (active) {
     return { profile: profileWithPlatform, org: active.org, membership: active.membership };
   }
 
-  if (!profile.current_org_id) {
-    const { count: membershipCount } = await supabase
-      .from("organization_members")
-      .select("user_id", { count: "exact", head: true })
-      .eq("user_id", user.id);
-    if ((membershipCount ?? 0) > 0) {
-      redirect("/onboarding/workspace");
+  if (profile.current_org_id && hasMemberships) {
+    const currentStatus = await fetchMyOrgStatus(supabase, profile.current_org_id);
+    const alternate = pickAlternateActiveWorkspace(workspaces, profile.current_org_id);
+
+    if (alternate) {
+      await switchCurrentOrg(supabase, user.id, alternate.org_id);
+      redirect("/dashboard");
     }
+
+    if (currentStatus && currentStatus.org_status !== "active" && !platformAdminFlag) {
+      redirect("/workspace-suspended");
+    }
+
+    redirect("/workspace-deactivated");
+  }
+
+  if (!profile.current_org_id) {
+    if (hasMemberships) redirect("/onboarding/workspace");
     redirect("/onboarding/workspace");
   }
 
-  const { data: currentOrg } = await supabase
-    .from("organizations")
-    .select("status")
-    .eq("id", profile.current_org_id)
-    .maybeSingle();
-
-  const { count: membershipCount } = await supabase
-    .from("organization_members")
-    .select("user_id", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  if ((membershipCount ?? 0) > 0) {
-    if (currentOrg && currentOrg.status !== "active" && !platformAdminFlag) {
-      redirect("/workspace-suspended");
-    }
-    redirect("/login?error=deactivated");
+  if (hasMemberships) {
+    redirect("/workspace-deactivated");
   }
 
   return legacyOrgContext(profileWithPlatform);

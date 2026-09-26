@@ -303,15 +303,19 @@ BEGIN
         assignee_ids := array_append(assignee_ids, t.assign_to_id);
       END IF;
     ELSIF t.assign_to_type = 'branch' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(p.id) INTO assignee_ids
-      FROM profiles p
-      JOIN organization_members om ON om.user_id = p.id AND om.org_id = t.template_org_id AND om.status = 'active'
-      WHERE p.branch_id = t.assign_to_id AND p.role IN ('user', 'staff') AND p.status = 'active';
+      SELECT array_agg(om.user_id) INTO assignee_ids
+      FROM public.organization_members om
+      JOIN public.organizations o ON o.id = om.org_id AND o.status = 'active'
+      WHERE om.org_id = t.template_org_id
+        AND om.status = 'active'
+        AND om.branch_id = t.assign_to_id;
     ELSIF t.assign_to_type = 'department' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(p.id) INTO assignee_ids
-      FROM profiles p
-      JOIN organization_members om ON om.user_id = p.id AND om.org_id = t.template_org_id AND om.status = 'active'
-      WHERE p.department_id = t.assign_to_id AND p.role IN ('user', 'staff') AND p.status = 'active';
+      SELECT array_agg(om.user_id) INTO assignee_ids
+      FROM public.organization_members om
+      JOIN public.organizations o ON o.id = om.org_id AND o.status = 'active'
+      WHERE om.org_id = t.template_org_id
+        AND om.status = 'active'
+        AND om.department_id = t.assign_to_id;
     END IF;
 
     IF assignee_ids IS NULL THEN assignee_ids := ARRAY[]::UUID[]; END IF;
@@ -704,6 +708,54 @@ CREATE POLICY "task_instance_answers_manager_delete" ON public.task_instance_ans
   );
 
 SELECT task_app.assert_tenant_policies_reference_org();
+
+-- Caller-only workspace visibility (bypasses org RLS for suspended / inactive resolution)
+CREATE OR REPLACE FUNCTION public.my_org_status(p_org_id UUID)
+RETURNS TABLE (
+  org_id UUID,
+  org_name TEXT,
+  org_status TEXT,
+  membership_status TEXT,
+  membership_role TEXT
+)
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT o.id, o.name, o.status, m.status, m.role
+  FROM public.organization_members m
+  JOIN public.organizations o ON o.id = m.org_id
+  WHERE m.user_id = auth.uid()
+    AND m.org_id = p_org_id
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.my_workspaces()
+RETURNS TABLE (
+  org_id UUID,
+  org_name TEXT,
+  org_short_name TEXT,
+  org_status TEXT,
+  membership_status TEXT,
+  membership_role TEXT
+)
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT o.id, o.name, o.short_name, o.status, m.status, m.role
+  FROM public.organization_members m
+  JOIN public.organizations o ON o.id = m.org_id
+  WHERE m.user_id = auth.uid()
+  ORDER BY o.name;
+$$;
+
+REVOKE ALL ON FUNCTION public.my_org_status(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.my_workspaces() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.my_org_status(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.my_workspaces() TO authenticated;
 
 UPDATE public.profiles p
 SET is_platform_admin = EXISTS (
