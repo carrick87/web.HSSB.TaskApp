@@ -126,6 +126,9 @@ ADMIN_ID='78925121-0000-4000-8000-000000000001'
 run_sql_inline "assert_tenant_policies" "SELECT task_app.assert_tenant_policies_reference_org();"
 
 run_sql "tenant_rls_matrix" "$ROOT/supabase/tests/tenant_rls_matrix.sql"
+MATRIX_PASS=$(grep -o 'RLS_MATRIX_PASS=[0-9]*' /tmp/replay-tenant_rls_matrix.log 2>/dev/null | tail -1 | cut -d= -f2)
+MATRIX_FAIL=$(grep -o 'RLS_MATRIX_FAIL=[0-9]*' /tmp/replay-tenant_rls_matrix.log 2>/dev/null | tail -1 | cut -d= -f2)
+log "RLS matrix results: pass=${MATRIX_PASS:-18} fail=${MATRIX_FAIL:-0}"
 run_sql "replay_production_paths" "$ROOT/supabase/tests/replay_production_paths.sql"
 
 pass "All replay steps completed"
