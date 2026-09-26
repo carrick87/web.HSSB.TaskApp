@@ -27,7 +27,7 @@ type TemplateDraft = {
 };
 
 const emptyQuestion = (order: number): QuestionDraft => ({
-  id: crypto.randomUUID(),
+  id: `temp-${crypto.randomUUID()}`,
   question_text: "",
   answer_type: "text",
   is_required: true,
@@ -138,7 +138,7 @@ export function TemplateForm({
         assign_to_id: form.assign_to_id || null,
         created_by_profile_id: createdByProfileId,
         questions: validQuestions.map((q, i) => ({
-          id: q.id.startsWith("temp-") || template ? undefined : q.id,
+          id: template && !q.id.startsWith("temp-") ? q.id : undefined,
           question_text: q.question_text.trim(),
           answer_type: q.answer_type,
           is_required: q.is_required,

@@ -1,23 +1,52 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isSuperAdmin } from "@/lib/roles";
+import { getOrgApiContext } from "@/lib/org/api-auth";
+import { ORG_ROLES } from "@/lib/org/roles";
+import { isPlatformAdmin } from "@/lib/platform-admin";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id: targetUserId } = await params;
+  const orgCtx = await getOrgApiContext(true);
+  if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (!isSuperAdmin(profile?.role ?? "")) {
+  const supabase = await createClient();
+  const platformAdmin = await isPlatformAdmin(supabase);
+
+  const { data: targetMembership } = await supabase
+    .from("organization_members")
+    .select("role, status")
+    .eq("org_id", orgCtx.orgId)
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (!targetMembership || targetMembership.status !== "active") {
+    return NextResponse.json({ error: "User not found in this workspace" }, { status: 404 });
+  }
+
+  const targetRole = targetMembership.role as string;
+
+  const { data: targetIsPlatformAdmin } = await createAdminClient()
+    .from("platform_admins")
+    .select("user_id")
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (targetIsPlatformAdmin && !platformAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (targetRole === ORG_ROLES.OWNER && !platformAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (
+    orgCtx.role !== ORG_ROLES.OWNER &&
+    orgCtx.role !== ORG_ROLES.ADMIN
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,13 +59,8 @@ export async function POST(
     );
   }
 
-  const target = await supabase.from("profiles").select("id").eq("id", id).maybeSingle();
-  if (!target.data) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(id, { password });
+  const { error } = await admin.auth.admin.updateUserById(targetUserId, { password });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -290,6 +290,7 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', '{ACTORS["member_a"]}', true);
   PERFORM set_config('request.jwt.claims', '{{"sub":"{ACTORS["member_a"]}","role":"authenticated"}}', true);
   BEGIN
+    DELETE FROM task_instance_answers WHERE task_instance_id = v_instance AND question_id = v_q;
     INSERT INTO task_instance_answers (task_instance_id, question_id, answer_text)
     VALUES (v_instance, v_q, 'matrix');
     UPDATE _rls_results SET passed = true WHERE case_name = 'answers.member_insert_own';
@@ -328,11 +329,12 @@ BEGIN
   UPDATE task_instances SET status = 'verified', is_late = false WHERE id = v_instance;
   UPDATE _rls_results SET passed = true WHERE case_name = 'instances.manager_verify_ok';
 
-  PERFORM set_config('request.jwt.claim.sub', '{ACTORS["owner"]}', true);
-  PERFORM set_config('request.jwt.claims', '{{"sub":"{ACTORS["owner"]}","role":"authenticated"}}', true);
+  PERFORM set_config('request.jwt.claim.sub', '{ACTORS["member_a"]}', true);
+  PERFORM set_config('request.jwt.claims', '{{"sub":"{ACTORS["member_a"]}","role":"authenticated"}}', true);
   BEGIN
     UPDATE organizations SET status = 'suspended' WHERE id = v_org_hssb;
-    UPDATE _rls_results SET passed = false WHERE case_name = 'orgs.member_suspend_denied';
+    GET DIAGNOSTICS v_cnt = ROW_COUNT;
+    UPDATE _rls_results SET passed = (v_cnt = 0) WHERE case_name = 'orgs.member_suspend_denied';
   EXCEPTION WHEN OTHERS THEN
     UPDATE _rls_results SET passed = true WHERE case_name = 'orgs.member_suspend_denied';
   END;

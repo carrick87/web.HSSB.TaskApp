@@ -1,6 +1,6 @@
 -- 013: Storage paths prefixed with org_id; membership-checked writes for branding.
-
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Do NOT ENABLE ROW LEVEL SECURITY on storage.objects here — on Supabase it is owned by
+-- supabase_storage_admin and the migration role cannot ALTER the table (rolls back the txn).
 
 CREATE OR REPLACE FUNCTION task_app.storage_first_segment_uuid(p_name TEXT)
 RETURNS UUID
@@ -21,6 +21,19 @@ EXCEPTION
     RETURN NULL;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.storage_first_segment_uuid(p_name TEXT)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, storage, pg_temp
+AS $$
+  SELECT task_app.storage_first_segment_uuid(p_name)
+$$;
+
+REVOKE ALL ON FUNCTION public.storage_first_segment_uuid(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.storage_first_segment_uuid(TEXT) TO authenticated, anon;
 
 -- Migrate legacy task-attachments paths task_id/file → org_id/task_id/file
 UPDATE storage.objects o
@@ -62,21 +75,21 @@ CREATE POLICY "org_branding_admin_insert"
   WITH CHECK (
     bucket_id = 'company-branding'
     AND (storage.foldername(name))[1] IS NOT NULL
-    AND public.is_org_admin(task_app.storage_first_segment_uuid(name))
+    AND public.is_org_admin(public.storage_first_segment_uuid(name))
   );
 
 CREATE POLICY "org_branding_admin_update"
   ON storage.objects FOR UPDATE TO authenticated
   USING (
     bucket_id = 'company-branding'
-    AND public.is_org_admin(task_app.storage_first_segment_uuid(name))
+    AND public.is_org_admin(public.storage_first_segment_uuid(name))
   );
 
 CREATE POLICY "org_branding_admin_delete"
   ON storage.objects FOR DELETE TO authenticated
   USING (
     bucket_id = 'company-branding'
-    AND public.is_org_admin(task_app.storage_first_segment_uuid(name))
+    AND public.is_org_admin(public.storage_first_segment_uuid(name))
   );
 
 -- task-attachments: path org_id/...
@@ -87,7 +100,7 @@ CREATE POLICY "task_attachments_org_read"
   USING (
     bucket_id = 'task-attachments'
     AND (
-      public.is_org_member(task_app.storage_first_segment_uuid(name))
+      public.is_org_member(public.storage_first_segment_uuid(name))
       OR EXISTS (
         SELECT 1 FROM public.tasks t
         WHERE t.id::text = (storage.foldername(name))[1]
@@ -101,7 +114,7 @@ CREATE POLICY "task_attachments_org_write"
   WITH CHECK (
     bucket_id = 'task-attachments'
     AND (
-      public.is_org_member(task_app.storage_first_segment_uuid(name))
+      public.is_org_member(public.storage_first_segment_uuid(name))
       OR EXISTS (
         SELECT 1 FROM public.tasks t
         WHERE t.id::text = (storage.foldername(name))[1]
@@ -116,7 +129,7 @@ CREATE POLICY "task_attachments_org_delete"
     bucket_id = 'task-attachments'
     AND (
       COALESCE(owner, owner_id::uuid) = auth.uid()
-      OR public.is_org_manager_or_above(task_app.storage_first_segment_uuid(name))
+      OR public.is_org_manager_or_above(public.storage_first_segment_uuid(name))
       OR EXISTS (
         SELECT 1 FROM public.tasks t
         WHERE t.id::text = (storage.foldername(name))[1]
@@ -158,6 +171,31 @@ AS $$
   LIMIT 1;
 $$;
 
+CREATE OR REPLACE FUNCTION public.task_files_instance_id(p_name TEXT)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, storage, pg_temp
+AS $$
+  SELECT task_app.task_files_instance_id(p_name)
+$$;
+
+CREATE OR REPLACE FUNCTION public.task_files_org_id(p_name TEXT)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, storage, pg_temp
+AS $$
+  SELECT task_app.task_files_org_id(p_name)
+$$;
+
+REVOKE ALL ON FUNCTION public.task_files_instance_id(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.task_files_org_id(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.task_files_instance_id(TEXT) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.task_files_org_id(TEXT) TO authenticated, anon;
+
 CREATE POLICY "task_files_upload"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
@@ -165,7 +203,7 @@ CREATE POLICY "task_files_upload"
     AND (storage.foldername(name))[1] = auth.uid()::text
     AND EXISTS (
       SELECT 1 FROM public.task_instances ti
-      WHERE ti.id = task_app.task_files_instance_id(name)
+      WHERE ti.id = public.task_files_instance_id(name)
         AND ti.assignee_profile_id = auth.uid()
         AND public.is_org_member(ti.org_id)
     )
@@ -177,7 +215,7 @@ CREATE POLICY "task_files_select"
     bucket_id = 'task-files'
     AND (
       (storage.foldername(name))[1] = auth.uid()::text
-      OR public.is_org_manager_or_above(task_app.task_files_org_id(name))
+      OR public.is_org_manager_or_above(public.task_files_org_id(name))
     )
   );
 

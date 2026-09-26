@@ -68,16 +68,25 @@ export default async function PicVerifyDetailPage({
   }
 
   const templateId = Array.isArray(task.template) ? (task.template[0] as { id?: string })?.id : (task.template as { id?: string })?.id;
-  const { data: questions } = await supabase
-    .from("task_template_questions")
-    .select("*")
-    .eq("template_id", templateId)
-    .order("sort_order", { ascending: true });
-
   const { data: answers } = await supabase
     .from("task_instance_answers")
     .select("id, question_id, answer_text, answer_number, answer_boolean, answer_file_url")
     .eq("task_instance_id", id);
+
+  const answerQuestionIds = (answers ?? []).map((a) => a.question_id);
+  let questionsQuery = supabase
+    .from("task_template_questions")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: true });
+  if (answerQuestionIds.length > 0) {
+    questionsQuery = questionsQuery.or(
+      `is_active.eq.true,id.in.(${answerQuestionIds.join(",")})`
+    );
+  } else {
+    questionsQuery = questionsQuery.eq("is_active", true);
+  }
+  const { data: questions } = await questionsQuery;
 
   const assignee = assigneeDisplay(task.assignee);
   const taskTitle = Array.isArray(task.template) ? (task.template[0] as { title?: string })?.title : (task.template as { title?: string })?.title;

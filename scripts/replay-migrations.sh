@@ -76,6 +76,12 @@ run_sql "fingerprint_pre_006" "$ROOT/supabase/snapshots/fingerprint.sql"
 
 run_sql "seed_production_shape" "$ROOT/supabase/tests/seed_production_shape.sql"
 
+run_sql "stubs-storage-supabase" "$ROOT/supabase/snapshots/stubs-storage-supabase.sql"
+
+if grep -q 'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY' "$ROOT/supabase/migrations/013_multitenant_storage.sql" 2>/dev/null; then
+  fail "013 must not ENABLE ROW LEVEL SECURITY on storage.objects (Supabase migrator cannot)"
+fi
+
 log "Counts after seed (before 006):"
 sudo -u "$DB_USER" psql -d "$DB_NAME" -c "
 SELECT 'auth.users' t, COUNT(*) FROM auth.users
@@ -133,6 +139,8 @@ MATRIX_FAIL=$(grep -o 'RLS_MATRIX_FAIL=[0-9]*' /tmp/replay-tenant_rls_matrix.log
 log "RLS matrix results: pass=${MATRIX_PASS:-?} fail=${MATRIX_FAIL:-0}"
 
 run_sql "replay_production_paths" "$ROOT/supabase/tests/replay_production_paths.sql"
+
+run_sql "replay_013_non_owner" "$ROOT/supabase/tests/replay_013_non_owner.sql"
 
 pass "All replay steps completed"
 echo "[replay] SUMMARY: prod 005e baseline + seed, 006-017 x2, RLS matrix + production paths OK"

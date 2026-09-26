@@ -27,6 +27,7 @@ export default async function EditTemplatePage({
     .from("task_template_questions")
     .select("*")
     .eq("template_id", id)
+    .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
   const { data: branches } = await supabase.from("branches").select("id, name").order("name");

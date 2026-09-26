@@ -350,11 +350,15 @@ BEGIN
       END IF;
     END IF;
     IF NEW.assignee_id IS NOT NULL AND NEW.org_id IS NOT NULL THEN
-      IF NOT EXISTS (
-        SELECT 1 FROM public.organization_members om
-        WHERE om.user_id = NEW.assignee_id AND om.org_id = NEW.org_id AND om.status = 'active'
-      ) THEN
-        RAISE EXCEPTION 'assignee_id must be an active member of the task organization';
+      IF TG_OP = 'INSERT'
+         OR NEW.assignee_id IS DISTINCT FROM OLD.assignee_id
+         OR NEW.org_id IS DISTINCT FROM OLD.org_id THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM public.organization_members om
+          WHERE om.user_id = NEW.assignee_id AND om.org_id = NEW.org_id AND om.status = 'active'
+        ) THEN
+          RAISE EXCEPTION 'assignee_id must be an active member of the task organization';
+        END IF;
       END IF;
     END IF;
   ELSIF TG_TABLE_NAME = 'projects' THEN
@@ -366,17 +370,23 @@ BEGIN
     END IF;
   ELSIF TG_TABLE_NAME = 'task_instances' THEN
     IF NEW.template_id IS NOT NULL THEN
-      SELECT org_id INTO v_ref_org FROM public.task_templates WHERE id = NEW.template_id;
-      IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
-        RAISE EXCEPTION 'template_id must belong to the same organization';
+      IF TG_OP = 'INSERT' OR NEW.template_id IS DISTINCT FROM OLD.template_id OR NEW.org_id IS DISTINCT FROM OLD.org_id THEN
+        SELECT org_id INTO v_ref_org FROM public.task_templates WHERE id = NEW.template_id;
+        IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+          RAISE EXCEPTION 'template_id must belong to the same organization';
+        END IF;
       END IF;
     END IF;
     IF NEW.assignee_profile_id IS NOT NULL AND NEW.org_id IS NOT NULL THEN
-      IF NOT EXISTS (
-        SELECT 1 FROM public.organization_members om
-        WHERE om.user_id = NEW.assignee_profile_id AND om.org_id = NEW.org_id AND om.status = 'active'
-      ) THEN
-        RAISE EXCEPTION 'assignee_profile_id must be an active member of the instance organization';
+      IF TG_OP = 'INSERT'
+         OR NEW.assignee_profile_id IS DISTINCT FROM OLD.assignee_profile_id
+         OR NEW.org_id IS DISTINCT FROM OLD.org_id THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM public.organization_members om
+          WHERE om.user_id = NEW.assignee_profile_id AND om.org_id = NEW.org_id AND om.status = 'active'
+        ) THEN
+          RAISE EXCEPTION 'assignee_profile_id must be an active member of the instance organization';
+        END IF;
       END IF;
     END IF;
   ELSIF TG_TABLE_NAME = 'project_members' THEN
@@ -489,7 +499,8 @@ GRANT UPDATE (
   address,
   phone,
   email,
-  website
+  website,
+  status
 ) ON public.organizations TO authenticated;
 
 CREATE OR REPLACE FUNCTION task_app.enforce_organizations_admin_update()
@@ -499,8 +510,15 @@ SET search_path = public, task_app, pg_temp
 AS $$
 DECLARE
   jwt_role TEXT := COALESCE(auth.role(), NULLIF(current_setting('request.jwt.claim.role', true), ''));
+  claims_role TEXT := COALESCE(auth.jwt()->>'role', '');
 BEGIN
-  IF jwt_role IN ('service_role', 'supabase_admin') OR current_user = 'service_role' THEN
+  IF jwt_role IN ('service_role', 'supabase_admin')
+     OR claims_role = 'service_role'
+     OR current_user IN ('service_role', 'supabase_admin', 'postgres') THEN
+    RETURN NEW;
+  END IF;
+
+  IF auth.uid() IS NULL AND current_user = 'postgres' THEN
     RETURN NEW;
   END IF;
 
@@ -544,6 +562,15 @@ $$;
 ALTER TABLE public.task_template_questions
   ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
 
+DELETE FROM public.task_instance_answers a
+USING public.task_instance_answers b
+WHERE a.id > b.id
+  AND a.task_instance_id = b.task_instance_id
+  AND a.question_id = b.question_id;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_instance_answers_instance_question
+  ON public.task_instance_answers (task_instance_id, question_id);
+
 -- task_instance_answers org-scoped (legacy 001/007 policies dropped above)
 ALTER TABLE public.task_instance_answers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "task_instance_answers_org_select" ON public.task_instance_answers;
@@ -551,6 +578,7 @@ DROP POLICY IF EXISTS "task_instance_answers_org_write" ON public.task_instance_
 DROP POLICY IF EXISTS "task_instance_answers_assignee_insert" ON public.task_instance_answers;
 DROP POLICY IF EXISTS "task_instance_answers_assignee_update" ON public.task_instance_answers;
 DROP POLICY IF EXISTS "task_instance_answers_manager_update" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_assignee_delete" ON public.task_instance_answers;
 DROP POLICY IF EXISTS "task_instance_answers_manager_delete" ON public.task_instance_answers;
 
 CREATE POLICY "task_instance_answers_org_select" ON public.task_instance_answers FOR SELECT TO authenticated
@@ -603,6 +631,17 @@ CREATE POLICY "task_instance_answers_manager_update" ON public.task_instance_ans
     )
   );
 
+CREATE POLICY "task_instance_answers_assignee_delete" ON public.task_instance_answers FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.task_instances ti
+      WHERE ti.id = task_instance_id
+        AND ti.assignee_profile_id = auth.uid()
+        AND ti.status IN ('pending', 'accepted', 'rejected')
+        AND public.is_org_member(ti.org_id)
+    )
+  );
+
 CREATE POLICY "task_instance_answers_manager_delete" ON public.task_instance_answers FOR DELETE TO authenticated
   USING (
     EXISTS (
@@ -612,3 +651,8 @@ CREATE POLICY "task_instance_answers_manager_delete" ON public.task_instance_ans
   );
 
 SELECT task_app.assert_tenant_policies_reference_org();
+
+UPDATE public.profiles p
+SET is_platform_admin = EXISTS (
+  SELECT 1 FROM public.platform_admins pa WHERE pa.user_id = p.id
+);

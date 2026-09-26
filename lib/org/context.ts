@@ -2,11 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Profile } from "@/types/database.types";
 import type { OrgRole } from "./roles";
-import { isOrgAdminRole, isOrgManagerOrAbove, legacyProfileRoleToOrgRole } from "./roles";
+import { isOrgAdminRole, isOrgManagerOrAbove, legacyProfileRoleToOrgRole, ORG_ROLES } from "./roles";
 import { PRODUCT_BRAND, type Organization } from "./constants";
 import { getCurrentUser } from "@/lib/auth";
 import { getTestAuthBypassUserId } from "@/lib/test-auth-bypass";
-import { ORG_ROLES } from "./roles";
+import { isPlatformAdmin } from "@/lib/platform-admin";
 
 export type { Organization };
 export { PRODUCT_BRAND };
@@ -137,9 +137,15 @@ export async function requireOrgContext(): Promise<OrgContext> {
   if (!profile) redirect("/login");
   if (profile.status === "deactivated") redirect("/login?error=deactivated");
 
+  const platformAdminFlag = await isPlatformAdmin(supabase);
+  const profileWithPlatform = {
+    ...(profile as Profile),
+    is_platform_admin: platformAdminFlag,
+  };
+
   const active = await getActiveOrganization(user.id, profile.current_org_id);
   if (active) {
-    return { profile: profile as Profile, org: active.org, membership: active.membership };
+    return { profile: profileWithPlatform, org: active.org, membership: active.membership };
   }
 
   // Not migrated yet or no org — onboarding
@@ -147,7 +153,7 @@ export async function requireOrgContext(): Promise<OrgContext> {
     redirect("/onboarding/workspace");
   }
 
-  return legacyOrgContext(profile as Profile);
+  return legacyOrgContext(profileWithPlatform);
 }
 
 export async function requireOrgAdmin() {
@@ -174,8 +180,7 @@ export async function requirePlatformAdmin() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("is_platform_admin").eq("id", user.id).single();
-  if (!profile?.is_platform_admin) redirect("/dashboard");
+  if (!(await isPlatformAdmin(supabase))) redirect("/dashboard");
 }
 
 export async function getPublicOrgBranding(orgId: string | null) {

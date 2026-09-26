@@ -66,6 +66,7 @@ ALTER TABLE public.task_user_stats
 DO $$
 DECLARE
   v_hssb_id UUID;
+  v_admin_id UUID;
 BEGIN
   SELECT id INTO v_hssb_id FROM public.organizations WHERE slug = 'hssb' LIMIT 1;
   IF v_hssb_id IS NULL THEN
@@ -88,6 +89,9 @@ BEGIN
       INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
       SELECT v_hssb_id, p.id,
         CASE
+          WHEN p.username = 'demo_admin' THEN 'member'
+          WHEN p.username = 'demo_manager' THEN 'manager'
+          WHEN p.username LIKE 'demo\_member%' ESCAPE '\' THEN 'member'
           WHEN p.username LIKE 'demo\_%' ESCAPE '\' THEN 'member'
           WHEN p.username = 'admin' THEN 'owner'
           WHEN p.role IN ('admin', 'super_admin') THEN 'owner'
@@ -101,6 +105,9 @@ BEGIN
       INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
       SELECT v_hssb_id, p.id,
         CASE
+          WHEN p.username = 'demo_admin' THEN 'member'
+          WHEN p.username = 'demo_manager' THEN 'manager'
+          WHEN p.username LIKE 'demo\_member%' ESCAPE '\' THEN 'member'
           WHEN p.username LIKE 'demo\_%' ESCAPE '\' THEN 'member'
           WHEN p.username = 'admin' THEN 'owner'
           WHEN p.role IN ('admin', 'super_admin') THEN 'owner'
@@ -115,6 +122,25 @@ BEGIN
     UPDATE public.profiles
     SET current_org_id = v_hssb_id
     WHERE current_org_id IS NULL;
+
+    SELECT id INTO v_admin_id FROM public.profiles
+    WHERE username = 'admin'
+       OR auth_email ILIKE 'carrick@harrisons.com.my'
+       OR id::text LIKE '78925121%'
+    ORDER BY CASE WHEN username = 'admin' THEN 0 ELSE 1 END
+    LIMIT 1;
+
+    IF v_admin_id IS NOT NULL THEN
+      INSERT INTO public.organization_members (org_id, user_id, role, status)
+      VALUES (v_hssb_id, v_admin_id, 'owner', 'active')
+      ON CONFLICT (org_id, user_id) DO NOTHING;
+
+      UPDATE public.profiles SET current_org_id = v_hssb_id
+      WHERE id = v_admin_id AND current_org_id IS NULL;
+
+      INSERT INTO public.platform_admins (user_id) VALUES (v_admin_id)
+      ON CONFLICT (user_id) DO NOTHING;
+    END IF;
 
     INSERT INTO public.migration_state (key) VALUES ('011_hssb_profile_backfill');
   END IF;
@@ -159,41 +185,17 @@ UPDATE public.profiles SET role = 'super_admin' WHERE role = 'admin';
 UPDATE public.profiles SET role = 'manager' WHERE role = 'pic';
 UPDATE public.profiles SET role = 'user' WHERE role = 'staff';
 
+-- Demo accounts: global profile.role is not used for authorization; keep demo_* at lowest tier.
+UPDATE public.profiles SET role = 'user'
+WHERE username = 'demo_admin' OR username LIKE 'demo\_member%' ESCAPE '\';
+UPDATE public.profiles SET role = 'manager' WHERE username = 'demo_manager';
+
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check
   CHECK (role IN ('super_admin', 'manager', 'user'));
 
--- Production bootstrap: Carrick admin is HSSB owner + platform admin; demo users are members only.
-DO $$
-DECLARE
-  v_hssb_id UUID;
-  v_admin_id UUID;
-BEGIN
-  SELECT id INTO v_hssb_id FROM public.organizations WHERE slug = 'hssb' LIMIT 1;
-  SELECT id INTO v_admin_id FROM public.profiles
-  WHERE username = 'admin'
-     OR auth_email ILIKE 'carrick@harrisons.com.my'
-     OR id::text LIKE '78925121%'
-  ORDER BY CASE WHEN username = 'admin' THEN 0 ELSE 1 END
-  LIMIT 1;
-
-  IF v_hssb_id IS NOT NULL AND v_admin_id IS NOT NULL THEN
-    INSERT INTO public.organization_members (org_id, user_id, role, status)
-    VALUES (v_hssb_id, v_admin_id, 'owner', 'active')
-    ON CONFLICT (org_id, user_id) DO UPDATE SET role = 'owner';
-
-    UPDATE public.organization_members om
-    SET role = 'member'
-    FROM public.profiles p
-    WHERE om.org_id = v_hssb_id
-      AND om.user_id = p.id
-      AND p.username LIKE 'demo\_%' ESCAPE '\'
-      AND om.role = 'owner';
-
-    UPDATE public.profiles SET current_org_id = v_hssb_id
-    WHERE id = v_admin_id AND current_org_id IS NULL;
-
-    INSERT INTO public.platform_admins (user_id) VALUES (v_admin_id)
-    ON CONFLICT (user_id) DO NOTHING;
-  END IF;
-END $$;
+-- Mirror platform_admins onto profiles.is_platform_admin for UI only (auth uses is_platform_admin()).
+UPDATE public.profiles p
+SET is_platform_admin = EXISTS (
+  SELECT 1 FROM public.platform_admins pa WHERE pa.user_id = p.id
+);
