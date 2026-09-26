@@ -31,7 +31,7 @@ export async function AppHeader() {
           <Link
             key={l.href}
             href={l.href}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 text-sm font-medium"
+            className="text-neutral-700 hover:text-neutral-900 text-sm font-medium"
           >
             {l.label}
           </Link>
@@ -41,10 +41,10 @@ export async function AppHeader() {
   }
 
   return (
-    <header className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+    <header className="border-b border-neutral-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="font-semibold text-slate-900 dark:text-slate-100">
+          <Link href="/dashboard" className="font-semibold text-neutral-1000">
             TaskApp
           </Link>
           <nav className="flex items-center gap-4">
@@ -52,7 +52,7 @@ export async function AppHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-500 dark:text-slate-400">
+          <span className="text-sm text-neutral-700">
             {profile.username}
           </span>
           <form action={logout}>

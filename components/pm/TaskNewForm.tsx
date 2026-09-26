@@ -35,39 +35,39 @@ export function TaskNewForm({
   return (
     <form action={handleCreate} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Task Title *
         </label>
         <input
           name="title"
           type="text"
           required
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-input"
           placeholder="Enter task title"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Description
         </label>
         <textarea
           name="description"
           rows={3}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-input"
           placeholder="Task description (optional)"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Status
           </label>
           <select
             name="status"
             defaultValue="todo"
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="atlassian-select"
           >
             <option value="todo">To Do</option>
             <option value="in_progress">In Progress</option>
@@ -76,13 +76,13 @@ export function TaskNewForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Priority
           </label>
           <select
             name="priority"
             defaultValue="medium"
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="atlassian-select"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -92,18 +92,18 @@ export function TaskNewForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Due Date
         </label>
         <input
           name="due_date"
           type="date"
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-input"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Department *
         </label>
         <select
@@ -111,7 +111,7 @@ export function TaskNewForm({
           required
           value={selectedDeptId}
           onChange={(e) => setSelectedDeptId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-select"
         >
           <option value="">Select department</option>
           {departments.map((d) => (
@@ -123,13 +123,13 @@ export function TaskNewForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Project (optional)
         </label>
         <select
           name="project_id"
           defaultValue={defaultProjectId || ""}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-select"
         >
           <option value="">No project (private task)</option>
           {projects.map((p) => (
@@ -138,20 +138,20 @@ export function TaskNewForm({
             </option>
           ))}
         </select>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs text-neutral-700 mt-1">
           Private tasks are only visible to the assignee, you, and admins.
           Project tasks are visible to all project members.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Assign To *
         </label>
         <select
           name="assignee_id"
           required
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="atlassian-select"
         >
           <option value="">Select assignee</option>
           {filteredMembers.map((m) => (
@@ -161,7 +161,7 @@ export function TaskNewForm({
           ))}
         </select>
         {!selectedDeptId && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          <p className="text-xs text-atlassian-yellow mt-1">
             Select a department first to see assignable members.
           </p>
         )}
@@ -170,7 +170,7 @@ export function TaskNewForm({
       <div className="flex justify-end gap-3 pt-4">
         <Link
           href="/pm"
-          className="inline-flex items-center justify-center font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-500 px-4 py-2 text-sm"
+          className="inline-flex items-center justify-center font-medium rounded-atlassian transition focus:outline-none focus:ring-2 focus:ring-brand-200 bg-neutral-200 text-neutral-800 hover:bg-neutral-300 px-4 py-2 text-sm"
         >
           Cancel
         </Link>

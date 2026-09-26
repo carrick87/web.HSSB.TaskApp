@@ -38,31 +38,31 @@ function KanbanColumn({
           <Link
             key={task.id}
             href={`/pm/tasks/${task.id}`}
-            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors"
+            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors border border-neutral-200"
           >
             <p className="font-medium text-sm text-neutral-1000 line-clamp-2">
               {task.title}
             </p>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2.5 gap-2">
               {task.assignee && (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center text-[10px] font-semibold">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-semibold">
                     {task.assignee.username.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-[10px] text-neutral-500">{task.assignee.username}</span>
+                  <span className="text-xs text-neutral-700">{task.assignee.username}</span>
                 </div>
               )}
               <TaskPriorityBadge priority={task.priority} />
             </div>
             {task.due_date && (
-              <p className="text-[10px] text-neutral-500 mt-2">
+              <p className="text-xs text-neutral-700 mt-2 font-medium">
                 Due: {new Date(task.due_date).toLocaleDateString()}
               </p>
             )}
           </Link>
         ))}
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-16 text-xs text-neutral-500">
+          <div className="flex items-center justify-center h-16 text-sm text-neutral-700">
             No tasks
           </div>
         )}
@@ -104,7 +104,7 @@ export default async function ProjectDetailPage({
               {project.name}
             </h1>
             {project.description && (
-              <p className="text-sm text-neutral-600 mt-0.5">
+              <p className="text-sm text-neutral-700 mt-0.5">
                 {project.description}
               </p>
             )}
@@ -122,7 +122,7 @@ export default async function ProjectDetailPage({
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Board</CardTitle>
-            <span className="text-xs text-neutral-500">{tasks.length} tasks</span>
+            <span className="text-xs text-neutral-700">{tasks.length} tasks</span>
           </CardHeader>
           <CardContent className="p-3">
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 lg:mx-0 lg:px-0">
@@ -164,7 +164,7 @@ export default async function ProjectDetailPage({
                       <p className="text-sm font-medium text-neutral-1000 truncate">
                         {m.profile?.username ?? "Unknown"}
                       </p>
-                      <p className="text-xs text-neutral-500 capitalize">
+                      <p className="text-xs text-neutral-700 capitalize">
                         {m.profile?.role}
                       </p>
                     </div>
@@ -172,7 +172,7 @@ export default async function ProjectDetailPage({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-neutral-500 text-center py-4">
+              <p className="text-sm text-neutral-700 text-center py-4">
                 No team members yet.
               </p>
             )}

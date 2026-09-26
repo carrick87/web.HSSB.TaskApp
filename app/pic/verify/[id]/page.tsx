@@ -49,7 +49,7 @@ export default async function PicVerifyDetailPage({
   if (task.status !== "submitted") {
     return (
       <div className="space-y-4">
-        <p className="text-slate-500">This task is not awaiting verification.</p>
+        <p className="text-neutral-700">This task is not awaiting verification.</p>
         <Link href="/pic/verify" className="text-blue-600 hover:underline">Back to list</Link>
       </div>
     );
@@ -93,20 +93,20 @@ export default async function PicVerifyDetailPage({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/pic/verify" className="text-sm text-slate-600 dark:text-slate-400 hover:underline">
+      <Link href="/pic/verify" className="text-sm text-brand-700 hover:underline">
         ← Back to list
       </Link>
       <Card>
         <CardHeader>
           <CardTitle>{taskTitle ?? "Task"}</CardTitle>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-neutral-700">
             Assignee: {assignee.username}
             {assignee.branchName && ` · ${assignee.branchName}`}
             {assignee.departmentName && ` · ${assignee.departmentName}`}
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-neutral-700">
             Submitted {task.submitted_at ? new Date(task.submitted_at).toLocaleString() : "—"}
-            {task.is_late && <span className="text-amber-600 dark:text-amber-400 ml-2">(Late)</span>}
+            {task.is_late && <span className="text-atlassian-yellow ml-2">(Late)</span>}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -114,10 +114,10 @@ export default async function PicVerifyDetailPage({
             const answer = answersList.find((a) => a.question_id === q.id);
             return (
               <div key={q.id}>
-                <p className="font-medium text-slate-700 dark:text-slate-300">
+                <p className="font-medium text-neutral-800">
                   {q.question_text}
                 </p>
-                <p className="text-slate-600 dark:text-slate-400 mt-1">
+                <p className="text-neutral-700 mt-1">
                   {answer?.answer_file_url ? (
                     <FileAnswerView path={answer.answer_file_url} />
                   ) : (

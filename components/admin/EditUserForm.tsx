@@ -97,30 +97,30 @@ export function EditUserForm({
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username *</label>
+          <label className="atlassian-label">Username *</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
             required
             minLength={3}
           />
         </div>
-        <p className="text-sm text-slate-500">Email (for recording):</p>
+        <p className="text-sm text-neutral-700">Email (for recording):</p>
         <input
           type="email"
           value={harrisonEmail}
           onChange={(e) => setHarrisonEmail(e.target.value)}
           placeholder="you@harrisons.com.my"
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+          className="atlassian-input"
         />
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Role *</label>
+          <label className="atlassian-label">Role *</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
           >
             <option value="staff">Staff</option>
             <option value="pic">PIC</option>
@@ -128,55 +128,55 @@ export function EditUserForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Branch</label>
+          <label className="atlassian-label">Branch</label>
           <select
             value={branchId}
             onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
           >
             <option value="">—</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+          <label className="atlassian-label">Department</label>
           <select
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
           >
             <option value="">—</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {setPasswordSuccess && <p className="text-sm text-green-600 dark:text-green-400">Password updated.</p>}
+        {setPasswordSuccess && <p className="text-sm text-atlassian-green">Password updated.</p>}
         <div className="flex gap-3">
           <Button type="submit" disabled={loading}>{loading ? "Saving…" : "Save"}</Button>
         </div>
       </form>
 
-      <form onSubmit={handleSetPassword} className="mt-8 p-4 rounded-lg border border-slate-200 dark:border-slate-600 space-y-3">
-        <h3 className="font-medium text-slate-800 dark:text-slate-200">Set new password</h3>
-        <p className="text-sm text-slate-500">Only admins can set a new password for this user.</p>
+      <form onSubmit={handleSetPassword} className="mt-8 p-4 rounded-lg border border-neutral-200 space-y-3">
+        <h3 className="font-semibold text-neutral-900">Set new password</h3>
+        <p className="text-sm text-neutral-700">Only admins can set a new password for this user.</p>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">New password</label>
+          <label className="atlassian-label">New password</label>
           <input
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
             placeholder="At least 6 characters"
             minLength={6}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Confirm new password</label>
+          <label className="atlassian-label">Confirm new password</label>
           <input
             type="password"
             value={newPasswordConfirm}
             onChange={(e) => setNewPasswordConfirm(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2"
+            className="atlassian-input"
             placeholder="Repeat password"
             minLength={6}
           />

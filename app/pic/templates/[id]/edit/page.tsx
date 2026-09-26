@@ -35,10 +35,10 @@ export default async function EditTemplatePage({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <Link href="/pic/templates" className="text-sm text-slate-600 dark:text-slate-400 hover:underline">
+      <Link href="/pic/templates" className="text-sm text-brand-700 hover:underline">
         ← Back to task manager
       </Link>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-2xl font-bold text-neutral-1000">
         Edit template
       </h1>
       <TemplateForm

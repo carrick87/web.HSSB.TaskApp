@@ -34,10 +34,10 @@ export function FileAnswerView({ path }: { path: string }) {
   }, [lightboxOpen]);
 
   if (error) {
-    return <span className="text-red-600 dark:text-red-400">{error}</span>;
+    return <span className="text-atlassian-red">{error}</span>;
   }
   if (!url) {
-    return <span className="text-slate-500 animate-pulse">Loading…</span>;
+    return <span className="text-neutral-700 animate-pulse">Loading…</span>;
   }
 
   const isImage = IMAGE_EXT.test(path);
@@ -47,7 +47,7 @@ export function FileAnswerView({ path }: { path: string }) {
         <button
           type="button"
           onClick={() => setLightboxOpen(true)}
-          className="inline-block rounded border border-slate-200 dark:border-slate-700 overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="inline-block rounded border border-neutral-200 overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           <img
             src={url}
@@ -87,7 +87,7 @@ export function FileAnswerView({ path }: { path: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 dark:text-blue-400 hover:underline"
+      className="text-brand-700 hover:underline"
     >
       View file
     </a>

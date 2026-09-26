@@ -59,24 +59,24 @@ export default async function TaskDetailPage({
             {task.project ? (
               <Link
                 href={`/pm/projects/${task.project.id}`}
-                className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                className="text-xs bg-atlassian-purple-light text-atlassian-purple px-2 py-0.5 rounded-atlassian hover:bg-purple-200 font-semibold"
               >
                 {task.project.name}
               </Link>
             ) : (
-              <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded">
+              <span className="text-xs bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded-atlassian font-semibold">
                 Private Task
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-neutral-1000">
             {task.title}
           </h1>
         </div>
         {(isCreator || isAdmin) && (
           <Link
             href={`/pm/tasks/${id}/edit`}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-sm text-brand-700 hover:text-brand-800 hover:underline"
           >
             Edit
           </Link>
@@ -91,11 +91,11 @@ export default async function TaskDetailPage({
             </CardHeader>
             <CardContent>
               {task.description ? (
-                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                <p className="text-neutral-800 whitespace-pre-wrap">
                   {task.description}
                 </p>
               ) : (
-                <p className="text-slate-500 dark:text-slate-400 italic">
+                <p className="text-neutral-700 italic">
                   No description provided.
                 </p>
               )}
@@ -114,22 +114,23 @@ export default async function TaskDetailPage({
                   task.comments.map((comment) => (
                     <div
                       key={comment.id}
-                      className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
+                      className="p-4 bg-neutral-50 border border-neutral-200 rounded-atlassian"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                        <span className="text-sm font-semibold text-neutral-1000">
                           {comment.author?.username ?? "Unknown"}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(comment.created_at).toLocaleString()}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <time className="text-xs text-neutral-700 whitespace-nowrap">
+                            {new Date(comment.created_at).toLocaleDateString()}{" "}
+                            {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </time>
                           {(comment.author_id === profile.id || isAdmin) && (
                             <form action={handleDeleteComment}>
                               <input type="hidden" name="commentId" value={comment.id} />
                               <button
                                 type="submit"
-                                className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                                className="text-xs text-atlassian-red hover:underline font-medium"
                               >
                                 Delete
                               </button>
@@ -137,23 +138,23 @@ export default async function TaskDetailPage({
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                      <p className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">
                         {comment.content}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    No comments yet.
+                  <p className="text-neutral-700 text-sm py-4 text-center">
+                    No comments yet. Be the first to add one.
                   </p>
                 )}
 
-                <form action={handleAddComment} className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <form action={handleAddComment} className="pt-4 border-t border-neutral-200">
                   <textarea
                     name="content"
                     rows={2}
                     placeholder="Add a comment..."
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-2"
+                    className="atlassian-input mb-2"
                   />
                   <div className="flex justify-end">
                     <Button type="submit" size="sm">
@@ -173,28 +174,28 @@ export default async function TaskDetailPage({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Assignee:</span>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Assignee:</span>
+                <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.assignee?.username ?? "Unknown"}
                 </p>
               </div>
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Created by:</span>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Created by:</span>
+                <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.creator?.username ?? "Unknown"}
                 </p>
               </div>
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Due date:</span>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Due date:</span>
+                <p className="font-medium text-neutral-1000 mt-0.5">
                   {task.due_date
                     ? new Date(task.due_date).toLocaleDateString()
                     : "Not set"}
                 </p>
               </div>
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Created:</span>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="text-neutral-700 text-xs font-semibold uppercase tracking-wide">Created:</span>
+                <p className="font-medium text-neutral-1000 mt-0.5">
                   {new Date(task.created_at).toLocaleString()}
                 </p>
               </div>
@@ -211,7 +212,7 @@ export default async function TaskDetailPage({
                   <select
                     name="status"
                     defaultValue={task.status}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+                    className="atlassian-select"
                   >
                     <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>

@@ -36,24 +36,24 @@ function KanbanColumn({
           <Link
             key={task.id}
             href={`/pm/tasks/${task.id}`}
-            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors"
+            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors border border-neutral-200"
           >
             <p className="font-medium text-sm text-neutral-1000 line-clamp-2">
               {task.title}
             </p>
             {task.description && (
-              <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+              <p className="text-xs text-neutral-700 mt-1.5 line-clamp-2">
                 {task.description}
               </p>
             )}
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mt-3 gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {task.project ? (
-                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-atlassian-purple-light text-atlassian-purple">
+                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-xs font-semibold bg-atlassian-purple-light text-atlassian-purple">
                     {task.project.name}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-600">
+                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-xs font-semibold bg-neutral-200 text-neutral-700">
                     Private
                   </span>
                 )}
@@ -61,14 +61,14 @@ function KanbanColumn({
               <TaskPriorityBadge priority={task.priority} />
             </div>
             {task.due_date && (
-              <p className="text-[10px] text-neutral-500 mt-2">
+              <p className="text-xs text-neutral-700 mt-2 font-medium">
                 Due: {new Date(task.due_date).toLocaleDateString()}
               </p>
             )}
           </Link>
         ))}
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-20 text-xs text-neutral-500">
+          <div className="flex items-center justify-center h-20 text-sm text-neutral-700">
             No tasks
           </div>
         )}
@@ -90,7 +90,7 @@ export default async function MyTasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-neutral-1000">My Tasks</h1>
-          <p className="text-sm text-neutral-600 mt-0.5">
+          <p className="text-sm text-neutral-700 mt-0.5">
             {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned to you
           </p>
         </div>

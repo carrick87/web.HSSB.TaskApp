@@ -101,7 +101,7 @@ export default function LoginForm() {
         <h1 className="text-2xl font-semibold text-neutral-1000 mb-1">
           TaskApp
         </h1>
-        <p className="text-neutral-600 text-sm">
+        <p className="text-neutral-700 text-sm">
           Harrison Sabah Sdn Bhd
         </p>
       </div>
@@ -114,7 +114,7 @@ export default function LoginForm() {
             className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
               mode === "signin"
                 ? "bg-white text-neutral-1000 shadow-atlassian-sm"
-                : "text-neutral-600 hover:text-neutral-900"
+                : "text-neutral-700 hover:text-neutral-900"
             }`}
           >
             Sign in
@@ -125,7 +125,7 @@ export default function LoginForm() {
             className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
               mode === "signup"
                 ? "bg-white text-neutral-1000 shadow-atlassian-sm"
-                : "text-neutral-600 hover:text-neutral-900"
+                : "text-neutral-700 hover:text-neutral-900"
             }`}
           >
             Sign up
@@ -208,7 +208,7 @@ export default function LoginForm() {
                 className="atlassian-input"
                 autoComplete="email"
               />
-              <p className="mt-1.5 text-xs text-neutral-500">Harrison email only. For records; not used for login.</p>
+              <p className="mt-1.5 text-xs text-neutral-700">Harrison email only. For records; not used for login.</p>
             </div>
             <div>
               <label htmlFor="signup-password" className="atlassian-label">
@@ -242,7 +242,7 @@ export default function LoginForm() {
         )}
       </div>
 
-      <p className="mt-6 text-center text-sm text-neutral-500">
+      <p className="mt-6 text-center text-sm text-neutral-700">
         <Link href="/" className="text-brand-700 hover:text-brand-800 hover:underline">
           Back to home
         </Link>

@@ -138,7 +138,7 @@ export function TaskForm({
   if (status === "submitted" || status === "verified" || status === "failed") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-neutral-700">
           {status === "verified" && "This task has been verified."}
           {status === "submitted" && "Awaiting verification."}
           {status === "failed" && "This task was marked as failed."}
@@ -157,8 +157,8 @@ export function TaskForm({
               }
               return (
                 <div key={q.id}>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{q.question_text}</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{value}</p>
+                  <p className="text-sm font-medium text-neutral-800">{q.question_text}</p>
+                  <p className="text-sm text-neutral-700 mt-1">{value}</p>
                 </div>
               );
             })}
@@ -172,20 +172,20 @@ export function TaskForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {status === "rejected" && (
-        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-200">
+        <div className="rounded-lg bg-atlassian-yellow-light p-3 text-sm text-yellow-700">
           This task was rejected. Update your answers below and submit again for verification.
         </div>
       )}
       {questions.map((q) => (
         <div key={q.id}>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             {q.question_text}
             {q.is_required && <span className="text-red-500"> *</span>}
           </label>
           {q.answer_type === "text" && (
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+              className="atlassian-input text-neutral-1000"
               value={(answers[q.id] as string) ?? ""}
               onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
               required={q.is_required}
@@ -194,7 +194,7 @@ export function TaskForm({
           {q.answer_type === "number" && (
             <input
               type="number"
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+              className="atlassian-input text-neutral-1000"
               value={(answers[q.id] as number) ?? ""}
               onChange={(e) =>
                 setAnswers((prev) => ({
@@ -207,7 +207,7 @@ export function TaskForm({
           )}
           {q.answer_type === "boolean" && (
             <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+              className="atlassian-input text-neutral-1000"
               value={(answers[q.id] as boolean) === true ? "true" : (answers[q.id] as boolean) === false ? "false" : ""}
               onChange={(e) =>
                 setAnswers((prev) => ({
@@ -224,7 +224,7 @@ export function TaskForm({
           )}
           {q.answer_type === "choice" && (
             <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+              className="atlassian-input text-neutral-1000"
               value={(answers[q.id] as string) ?? ""}
               onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
               required={q.is_required}
@@ -242,7 +242,7 @@ export function TaskForm({
               <input
                 type="file"
                 accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx"
-                className="w-full text-sm text-slate-600 dark:text-slate-400 file:mr-4 file:rounded file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium"
+                className="w-full text-sm text-neutral-700 file:mr-4 file:rounded file:border-0 file:bg-neutral-100 file:px-4 file:py-2 file:text-sm file:font-medium"
                 onChange={(e) =>
                   setFileForQuestion(q.id, e.target.files?.[0] ?? null)
                 }
@@ -252,7 +252,7 @@ export function TaskForm({
                   <img
                     src={filePreviewUrls[q.id]}
                     alt="Preview"
-                    className="w-32 h-32 object-cover rounded border border-slate-200 dark:border-slate-600"
+                    className="w-32 h-32 object-cover rounded border border-neutral-200"
                   />
                   <Button
                     type="button"
@@ -265,7 +265,7 @@ export function TaskForm({
                 </div>
               )}
               {files[q.id] && !filePreviewUrls[q.id] && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-700">
                   Selected: {files[q.id]?.name}
                 </p>
               )}

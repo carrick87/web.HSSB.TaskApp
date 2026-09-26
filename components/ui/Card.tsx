@@ -1,10 +1,12 @@
 export function Card({
   className = "",
+  style = {},
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`rounded-atlassian bg-white border border-neutral-200 shadow-atlassian-sm ${className}`}
+      className={`rounded-atlassian bg-white ${className}`}
+      style={{ border: '1px solid #DFE1E6', ...style }}
       {...props}
     />
   );
@@ -12,16 +14,30 @@ export function Card({
 
 export function CardHeader({
   className = "",
+  style = {},
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={`px-4 py-3 border-b border-neutral-200 ${className}`} {...props} />;
+  return (
+    <div 
+      className={`px-4 py-3 ${className}`}
+      style={{ borderBottom: '1px solid #DFE1E6', ...style }}
+      {...props}
+    />
+  );
 }
 
 export function CardTitle({
   className = "",
+  style = {},
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={`text-sm font-semibold text-neutral-1000 ${className}`} {...props} />;
+  return (
+    <h3 
+      className={`text-sm font-semibold ${className}`}
+      style={{ color: '#172B4D', ...style }}
+      {...props}
+    />
+  );
 }
 
 export function CardContent({
@@ -33,7 +49,14 @@ export function CardContent({
 
 export function CardDescription({
   className = "",
+  style = {},
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={`text-sm text-neutral-600 mt-1 ${className}`} {...props} />;
+  return (
+    <p 
+      className={`text-sm mt-1 ${className}`}
+      style={{ color: '#44546F', ...style }}
+      {...props}
+    />
+  );
 }

@@ -115,7 +115,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+          <div className="mb-4 p-3 bg-atlassian-red-light border border-red-200 rounded-atlassian text-sm text-atlassian-red">
             {error}
           </div>
         )}
@@ -125,28 +125,28 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
             {task.attachments.map((attachment) => (
               <li
                 key={attachment.id}
-                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-200 rounded-atlassian"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                  <p className="font-medium text-neutral-1000 truncate">
                     {attachment.file_name}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-neutral-700">
                     {formatFileSize(attachment.file_size)} •{" "}
                     {new Date(attachment.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => handleDownload(attachment.file_path, attachment.file_name)}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-sm text-brand-700 hover:text-brand-800 hover:underline font-medium"
                   >
                     Download
                   </button>
                   {canUpload && (
                     <button
                       onClick={() => handleDelete(attachment.id, attachment.file_path)}
-                      className="text-sm text-red-600 dark:text-red-400 hover:underline"
+                      className="text-sm text-atlassian-red hover:underline font-medium"
                     >
                       Delete
                     </button>
@@ -156,7 +156,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+          <p className="text-neutral-700 text-sm mb-4">
             No attachments yet.
           </p>
         )}
@@ -183,7 +183,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
                 {uploading ? "Uploading..." : "Upload File"}
               </Button>
             </label>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-xs text-neutral-700 mt-2">
               Max file size: 10MB
             </p>
           </div>

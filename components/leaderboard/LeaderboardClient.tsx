@@ -66,8 +66,9 @@ export function LeaderboardClient({
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="atlassian-label">Period</label>
+              <label htmlFor="period" className="atlassian-label">Period</label>
               <select
+                id="period"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
                 className="atlassian-select w-28"
@@ -80,8 +81,9 @@ export function LeaderboardClient({
             {period === "month" && (
               <>
                 <div>
-                  <label className="atlassian-label">Month</label>
+                  <label htmlFor="month" className="atlassian-label">Month</label>
                   <input
+                    id="month"
                     type="number"
                     min={1}
                     max={12}
@@ -91,8 +93,9 @@ export function LeaderboardClient({
                   />
                 </div>
                 <div>
-                  <label className="atlassian-label">Year</label>
+                  <label htmlFor="year" className="atlassian-label">Year</label>
                   <input
+                    id="year"
                     type="number"
                     min={2020}
                     max={2030}
@@ -105,8 +108,9 @@ export function LeaderboardClient({
             )}
             {period === "year" && (
               <div>
-                <label className="atlassian-label">Year</label>
+                <label htmlFor="year-only" className="atlassian-label">Year</label>
                 <input
+                  id="year-only"
                   type="number"
                   min={2020}
                   max={2030}
@@ -119,8 +123,9 @@ export function LeaderboardClient({
           </div>
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="atlassian-label">Branch</label>
+              <label htmlFor="branch" className="atlassian-label">Branch</label>
               <select
+                id="branch"
                 value={branchId}
                 onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
                 className="atlassian-select w-40"
@@ -130,8 +135,9 @@ export function LeaderboardClient({
               </select>
             </div>
             <div>
-              <label className="atlassian-label">Department</label>
+              <label htmlFor="department" className="atlassian-label">Department</label>
               <select
+                id="department"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 className="atlassian-select w-40"
@@ -152,21 +158,21 @@ export function LeaderboardClient({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Rankings</CardTitle>
-          <span className="text-xs text-neutral-500 font-normal">{periodLabel}</span>
+          <span className="text-xs text-neutral-700 font-normal">{periodLabel}</span>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50">
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Rank</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Branch</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden md:table-cell">Department</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Points</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Done</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Late</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Failed</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Rank</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Name</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden sm:table-cell">Branch</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden md:table-cell">Department</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide">Points</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Done</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Late</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-700 uppercase tracking-wide hidden lg:table-cell">Failed</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,7 +187,7 @@ export function LeaderboardClient({
                       {row.rank <= 3 ? (
                         <span className="text-lg">{MEDALS[row.rank - 1]}</span>
                       ) : (
-                        <span className="text-neutral-500">{row.rank}</span>
+                        <span className="text-neutral-700">{row.rank}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -192,8 +198,8 @@ export function LeaderboardClient({
                         <span className="font-medium text-neutral-1000">{row.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 hidden sm:table-cell">{row.branch || "—"}</td>
-                    <td className="px-4 py-3 text-neutral-600 hidden md:table-cell">{row.department || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-700 hidden sm:table-cell">{row.branch || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-700 hidden md:table-cell">{row.department || "—"}</td>
                     <td className="px-4 py-3 text-right font-bold text-brand-700">{row.totalPoints}</td>
                     <td className="px-4 py-3 text-right text-atlassian-green hidden lg:table-cell">{row.completed}</td>
                     <td className="px-4 py-3 text-right text-atlassian-yellow hidden lg:table-cell">{row.late}</td>
@@ -205,7 +211,7 @@ export function LeaderboardClient({
           </div>
           {(!data.leaderboard?.length) && (
             <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500 text-sm">No data for this period.</p>
+              <p className="text-neutral-700 text-sm">No data for this period.</p>
             </div>
           )}
         </CardContent>

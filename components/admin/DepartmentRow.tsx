@@ -72,7 +72,7 @@ export function DepartmentRow({
   }
 
   return (
-    <li className="py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+    <li className="py-2 flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 last:border-0">
       {editing ? (
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <input
@@ -80,12 +80,12 @@ export function DepartmentRow({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Department name"
-            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm w-40"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm w-40"
           />
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm w-40"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm w-40"
           >
             {branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
@@ -102,13 +102,13 @@ export function DepartmentRow({
         <>
           <div className="flex items-center gap-3">
             <span>{department.name}</span>
-            <span className="text-slate-500 text-sm">{branchName ?? "—"}</span>
+            <span className="text-neutral-700 text-sm">{branchName ?? "—"}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-sm text-brand-700 hover:underline"
             >
               Edit
             </button>
@@ -116,7 +116,7 @@ export function DepartmentRow({
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+              className="text-sm text-atlassian-red hover:underline disabled:opacity-50"
             >
               Delete
             </button>

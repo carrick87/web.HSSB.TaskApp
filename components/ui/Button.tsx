@@ -14,21 +14,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         "bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900 shadow-atlassian-sm",
       secondary:
-        "bg-neutral-200 text-neutral-800 hover:bg-neutral-300 active:bg-neutral-400",
+        "bg-white text-neutral-800 border border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100 shadow-atlassian-sm",
       danger:
         "bg-atlassian-red text-white hover:bg-red-600 active:bg-red-700 shadow-atlassian-sm",
       ghost:
-        "bg-transparent text-neutral-700 hover:bg-neutral-200 active:bg-neutral-300",
+        "bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200",
       link:
         "bg-transparent text-brand-700 hover:text-brand-800 hover:underline p-0",
       subtle:
-        "bg-transparent text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200",
+        "bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200",
     };
     
     const sizes = {
-      sm: "h-8 px-3 text-xs gap-1",
-      md: "h-9 px-4 text-sm gap-1.5",
-      lg: "h-10 px-5 text-sm gap-2",
+      sm: "h-10 min-w-[44px] px-3 text-sm gap-1",
+      md: "h-11 min-w-[44px] px-4 text-sm gap-1.5",
+      lg: "h-12 min-w-[44px] px-5 text-base gap-2",
     };
     
     return (

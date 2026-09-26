@@ -181,31 +181,31 @@ export function TemplateForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Title *
         </label>
         <input
           type="text"
           value={form.title}
           onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+          className="atlassian-input text-neutral-1000"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        <label className="atlassian-label">
           Description
         </label>
         <textarea
           value={form.description}
           onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+          className="atlassian-input text-neutral-1000"
           rows={2}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Recurrence
           </label>
           <select
@@ -216,7 +216,7 @@ export function TemplateForm({
                 recurrence_type: e.target.value as TemplateDraft["recurrence_type"],
               }))
             }
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           >
             <option value="daily">Daily</option>
             <option value="monthly">Monthly</option>
@@ -225,7 +225,7 @@ export function TemplateForm({
         </div>
         {form.recurrence_type === "custom" && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="atlassian-label">
               Every (days)
             </label>
             <input
@@ -238,32 +238,32 @@ export function TemplateForm({
                   recurrence_value: e.target.value ? parseInt(e.target.value, 10) : null,
                 }))
               }
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+              className="atlassian-input text-neutral-1000"
             />
           </div>
         )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Start date
           </label>
           <input
             type="date"
             value={form.start_date}
             onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             End date
           </label>
           <input
             type="date"
             value={form.end_date}
             onChange={(e) => setForm((p) => ({ ...p, end_date: e.target.value }))}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           />
         </div>
       </div>
@@ -273,23 +273,23 @@ export function TemplateForm({
             type="checkbox"
             checked={form.is_active}
             onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-            className="rounded border-slate-300"
+            className="rounded-atlassian border-neutral-300"
           />
-          <span className="text-sm text-slate-700 dark:text-slate-300">Active</span>
+          <span className="text-sm text-neutral-800">Active</span>
         </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={form.requires_verification}
             onChange={(e) => setForm((p) => ({ ...p, requires_verification: e.target.checked }))}
-            className="rounded border-slate-300"
+            className="rounded-atlassian border-neutral-300"
           />
-          <span className="text-sm text-slate-700 dark:text-slate-300">Requires verification</span>
+          <span className="text-sm text-neutral-800">Requires verification</span>
         </label>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             Assign to
           </label>
           <select
@@ -301,7 +301,7 @@ export function TemplateForm({
                 assign_to_id: "",
               }));
             }}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           >
             <option value="user">User</option>
             <option value="branch">Branch</option>
@@ -309,13 +309,13 @@ export function TemplateForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <label className="atlassian-label">
             {assignLabel}
           </label>
           <select
             value={form.assign_to_id}
             onChange={(e) => setForm((p) => ({ ...p, assign_to_id: e.target.value }))}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
+            className="atlassian-input text-neutral-1000"
           >
             <option value="">Select</option>
             {assignOptions.map((o) => (
@@ -329,7 +329,7 @@ export function TemplateForm({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label className="block text-sm font-medium text-neutral-800">
             Questions *
           </label>
           <Button type="button" variant="secondary" size="sm" onClick={addQuestion}>
@@ -340,7 +340,7 @@ export function TemplateForm({
           {questionList.map((q, idx) => (
             <div
               key={q.id}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-2"
+              className="rounded-lg border border-neutral-200 p-4 space-y-2"
             >
               <div className="flex justify-between items-start gap-2">
                 <input
@@ -348,7 +348,7 @@ export function TemplateForm({
                   placeholder="Question text"
                   value={q.question_text}
                   onChange={(e) => updateQuestion(q.id, { question_text: e.target.value })}
-                  className="flex-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm"
+                  className="flex-1 rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
                 />
                 <button
                   type="button"
@@ -367,7 +367,7 @@ export function TemplateForm({
                       options: e.target.value === "choice" ? [] : [],
                     })
                   }
-                  className="rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm"
+                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-sm"
                 >
                   <option value="text">Text</option>
                   <option value="number">Number</option>
@@ -387,7 +387,7 @@ export function TemplateForm({
               </div>
               {q.answer_type === "choice" && (
                 <div className="text-sm">
-                  <p className="text-slate-500 mb-1">Options (one per line)</p>
+                  <p className="text-neutral-700 mb-1">Options (one per line)</p>
                   <textarea
                     value={q.options.join("\n")}
                     onChange={(e) =>
@@ -396,7 +396,7 @@ export function TemplateForm({
                       })
                     }
                     placeholder="Option 1&#10;Option 2"
-                    className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1"
+                    className="w-full rounded border border-neutral-300 bg-white px-2 py-1"
                     rows={2}
                   />
                 </div>

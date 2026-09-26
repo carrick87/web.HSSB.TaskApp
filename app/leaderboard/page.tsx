@@ -20,7 +20,7 @@ export default async function LeaderboardPage() {
         <h1 className="text-xl font-semibold text-neutral-1000">
           Leaderboard
         </h1>
-        <p className="text-sm text-neutral-600 mt-0.5">
+        <p className="text-sm text-neutral-700 mt-0.5">
           Top performers by points earned
         </p>
       </div>
