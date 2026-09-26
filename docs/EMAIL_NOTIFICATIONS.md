@@ -48,3 +48,16 @@ Non-essential emails include signed **`List-Unsubscribe`** headers and `/api/ema
 ## Preview templates locally
 
 Visit **`/email-preview`** in development to render all templates (used for screenshot capture).
+
+## Design rules (implemented)
+
+- **Subjects** lead with who did what (e.g. assign preheader `Ali assigned you: Fix loading bay door`); task threads use a **stable subject** equal to the task title.
+- **From** display name: `{Workspace} via {PRODUCT_NAME}` (email address from `EMAIL_FROM`).
+- **Preheader** (`Preview`) on every template.
+- **Task emails** use a 600px white card, logo on white, details table, quoted comments, 44px `#0052CC` HTML button, plain-text part.
+- **Threading**: `In-Reply-To` / `References` → `<task-{taskId}@{domain}>`, unique `Message-ID` per send.
+- **Footer**: reason line, manage notifications + unsubscribe links, org postal address (fallback `PRODUCT_POSTAL_ADDRESS` in `src/config/product.ts`; required on digests).
+- **Dates**: recipient `timezone` + `date_format` on profile (default `DD/MM/YYYY`, `Asia/Kuching`).
+- **Settings grid**: `/settings/notifications` — rows Invites / Task activity / Reminders / Security × Email / In-app / Push (push disabled).
+
+Apply **`016_email_design_preferences.sql`** after `015` for pause-all, in-app columns, and thread registry.

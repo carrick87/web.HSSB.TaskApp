@@ -6,8 +6,9 @@ import { NotificationSettingsForm } from "@/components/settings/NotificationSett
 
 const branding = {
   orgId: "preview-org",
-  orgName: "Acme Workspace",
+  orgName: "HSSB",
   logoWidePath: null,
+  postalAddress: "HSSB Sdn Bhd, 12 Jalan Example, 93000 Kuching, Sarawak",
 };
 
 const samples: { key: string; label: string; template: string; payload: Record<string, unknown> }[] = [
@@ -37,22 +38,29 @@ const samples: { key: string; label: string; template: string; payload: Record<s
     key: "role_changed",
     label: "Role changed",
     template: EMAIL_TEMPLATES.ROLE_CHANGED,
-    payload: { newRole: "Admin", settingsUrl: "https://app.example.com/settings/organization" },
+    payload: { actorName: "Alex Chen", newRole: "Admin", settingsUrl: "https://app.example.com/settings/organization" },
   },
   {
     key: "removed_from_workspace",
     label: "Removed from workspace",
     template: EMAIL_TEMPLATES.REMOVED_FROM_WORKSPACE,
-    payload: { supportUrl: "https://app.example.com/settings/account" },
+    payload: { actorName: "Alex Chen", supportUrl: "https://app.example.com/settings/account" },
   },
   {
     key: "task_activity",
     label: "Task activity",
     template: EMAIL_TEMPLATES.TASK_ACTIVITY,
     payload: {
-      taskTitle: "Ship onboarding emails",
+      taskId: "00000000-0000-0000-0000-000000000001",
+      taskTitle: "Fix loading bay door",
       taskUrl: "https://app.example.com/pm/tasks/abc",
-      lines: ["Alex assigned you to this task", "Alex changed status to in progress"],
+      taskStatus: "in progress",
+      taskDueDateIso: "2026-09-27T00:00:00.000Z",
+      taskAssigneeName: "Jamie",
+      lines: [
+        "Ali assigned you: Fix loading bay door",
+        "Ali commented: “Door sensor still offline.”",
+      ],
     },
   },
   {
@@ -116,6 +124,8 @@ export default async function EmailPreviewPage() {
         branding,
         appUrl: config.appUrl,
         unsubscribeUrl: s.template.includes("account") || s.template.includes("workspace_suspended") ? undefined : unsub,
+        timezone: "Asia/Kuching",
+        dateFormat: "DD/MM/YYYY",
       }),
     }))
   );
@@ -134,9 +144,8 @@ export default async function EmailPreviewPage() {
           />
         </section>
       ))}
-      <section id="notification-settings" className="space-y-2 bg-white p-6 rounded-lg shadow-md max-w-2xl">
-        <h2 className="text-lg font-semibold">Notification settings (UI preview)</h2>
-        <NotificationSettingsForm />
+      <section id="notification-settings" className="space-y-2 bg-white p-6 rounded-lg shadow-md max-w-3xl">
+        <NotificationSettingsForm preview />
       </section>
     </div>
   );

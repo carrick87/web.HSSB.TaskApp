@@ -42,7 +42,7 @@ export async function notifyTaskAssigned(input: {
       taskId: input.taskId,
       taskTitle: input.taskTitle,
       taskUrl: url,
-      line: `${actor} assigned you to this task`,
+      line: `${actor} assigned you: ${input.taskTitle}`,
     });
   }
 }
@@ -130,6 +130,7 @@ export async function notifyTaskComment(input: {
   const actor = await actorName(admin, input.actorId);
   const url = taskUrl(input.taskId);
   const snippet = input.content.length > 120 ? `${input.content.slice(0, 117)}…` : input.content;
+  const quoted = `“${snippet}”`;
 
   const mentionIds = new Set<string>();
   const { data: members } = await admin
@@ -152,7 +153,7 @@ export async function notifyTaskComment(input: {
       taskId: input.taskId,
       taskTitle: input.taskTitle,
       taskUrl: url,
-      line: `${actor} mentioned you: “${snippet}”`,
+      line: `${actor} mentioned you: ${quoted}`,
     });
   }
 
@@ -172,7 +173,7 @@ export async function notifyTaskComment(input: {
       taskId: input.taskId,
       taskTitle: input.taskTitle,
       taskUrl: url,
-      line: `${actor} commented: “${snippet}”`,
+      line: `${actor} commented: ${quoted}`,
     });
   }
 }
@@ -203,6 +204,8 @@ export async function notifyRoleChanged(input: {
   actorId: string;
   newRole: string;
 }) {
+  const admin = createAdminClient();
+  const actor = await actorName(admin, input.actorId);
   const { appUrl } = await import("@/lib/email/config").then((m) => m.getEmailConfig());
   return emitNotification({
     orgId: input.orgId,
@@ -211,6 +214,7 @@ export async function notifyRoleChanged(input: {
     eventType: "member.role_changed",
     emailTemplate: EMAIL_TEMPLATES.ROLE_CHANGED,
     emailPayload: {
+      actorName: actor,
       newRole: formatOrgRoleLabel(input.newRole),
       settingsUrl: `${appUrl}/settings/organization`,
     },
@@ -227,6 +231,8 @@ export async function notifyRemovedFromWorkspace(input: {
   targetUserId: string;
   actorId: string;
 }) {
+  const admin = createAdminClient();
+  const actor = await actorName(admin, input.actorId);
   const { appUrl } = await import("@/lib/email/config").then((m) => m.getEmailConfig());
   return emitNotification({
     orgId: input.orgId,
@@ -234,7 +240,7 @@ export async function notifyRemovedFromWorkspace(input: {
     actorUserId: input.actorId,
     eventType: "member.removed",
     emailTemplate: EMAIL_TEMPLATES.REMOVED_FROM_WORKSPACE,
-    emailPayload: { supportUrl: `${appUrl}/settings/account` },
+    emailPayload: { actorName: actor, supportUrl: `${appUrl}/settings/account` },
     payload: {
       title: "Removed from workspace",
       inAppBody: "You no longer have access to this workspace.",

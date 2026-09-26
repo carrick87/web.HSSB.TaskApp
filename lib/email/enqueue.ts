@@ -34,7 +34,19 @@ export async function enqueueTaskActivityEmail(input: {
   line: string;
 }) {
   const { emitNotification } = await import("@/lib/notifications/emit");
-  const sendAfter = new Date(Date.now() + TASK_ACTIVITY_BATCH_DELAY_MS);
+  const { loadTaskEmailMeta } = await import("@/lib/email/task-meta");
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("timezone, date_format")
+    .eq("id", input.recipientUserId)
+    .maybeSingle();
+  const meta = await loadTaskEmailMeta(
+    input.taskId,
+    profile?.timezone ?? "Asia/Kuching",
+    profile?.date_format ?? "DD/MM/YYYY"
+  );
+
   return emitNotification({
     orgId: input.orgId,
     recipientUserId: input.recipientUserId,
@@ -43,14 +55,18 @@ export async function enqueueTaskActivityEmail(input: {
     entityType: "task",
     entityId: input.taskId,
     payload: {
-      title: `Update on ${input.taskTitle}`,
+      title: input.taskTitle,
       inAppBody: input.line,
       linkPath: input.taskUrl.replace(/^https?:\/\/[^/]+/, ""),
     },
     emailTemplate: "task_activity" as never,
     emailPayload: {
+      taskId: input.taskId,
       taskTitle: input.taskTitle,
       taskUrl: input.taskUrl,
+      taskStatus: meta?.status,
+      taskDueDateIso: meta?.dueDateIso,
+      taskAssigneeName: meta?.assigneeName,
       lines: [input.line],
       line: input.line,
     },

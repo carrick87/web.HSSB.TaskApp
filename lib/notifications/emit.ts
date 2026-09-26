@@ -45,6 +45,7 @@ async function shouldSendCategory(
     .eq("user_id", userId)
     .eq("org_id", orgId)
     .maybeSingle();
+  if (prefs?.pause_all) return false;
   if (!prefs) {
     if (template === EMAIL_TEMPLATES.TASK_DIGEST) return false;
     return true;
@@ -58,6 +59,34 @@ async function shouldSendCategory(
     template === EMAIL_TEMPLATES.INVITE_ACCEPTED
   ) {
     return prefs.membership_updates !== false;
+  }
+  return true;
+}
+
+async function shouldSendInApp(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  orgId: string,
+  eventType: string
+) {
+  const { data: prefs } = await admin
+    .from("email_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (!prefs) return true;
+  if (eventType.startsWith("invite") || eventType.includes("security") || eventType === "workspace.suspended") {
+    return prefs.in_app_invites !== false;
+  }
+  if (eventType.startsWith("task.") || eventType === "task.activity") {
+    return prefs.in_app_task_activity !== false;
+  }
+  if (eventType.includes("reminder") || eventType.includes("digest")) {
+    return prefs.in_app_reminders !== false;
+  }
+  if (eventType.startsWith("member.") || eventType === "invite.accepted") {
+    return prefs.in_app_membership !== false;
   }
   return true;
 }
@@ -89,20 +118,23 @@ export async function emitNotification(input: EmitNotificationInput) {
   }
 
   if (!input.skipInApp) {
-    const title =
-      (input.payload?.title as string) ??
-      (input.payload?.inAppTitle as string) ??
-      input.eventType.replace(/_/g, " ");
-    const body = (input.payload?.body as string) ?? (input.payload?.inAppBody as string) ?? null;
-    const link = (input.payload?.linkPath as string) ?? null;
-    await admin.from("notifications").insert({
-      org_id: input.orgId,
-      user_id: input.recipientUserId,
-      title,
-      body,
-      link_path: link,
-      notification_event_id: event.id,
-    });
+    const inAppOk = await shouldSendInApp(admin, input.recipientUserId, input.orgId, input.eventType);
+    if (inAppOk) {
+      const title =
+        (input.payload?.title as string) ??
+        (input.payload?.inAppTitle as string) ??
+        input.eventType.replace(/_/g, " ");
+      const body = (input.payload?.body as string) ?? (input.payload?.inAppBody as string) ?? null;
+      const link = (input.payload?.linkPath as string) ?? null;
+      await admin.from("notifications").insert({
+        org_id: input.orgId,
+        user_id: input.recipientUserId,
+        title,
+        body,
+        link_path: link,
+        notification_event_id: event.id,
+      });
+    }
   }
 
   if (!input.emailTemplate) return { eventId: event.id };

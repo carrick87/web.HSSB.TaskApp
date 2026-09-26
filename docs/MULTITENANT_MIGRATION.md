@@ -10,6 +10,7 @@ Apply **after** `001`–`005` (skip single-tenant `006`–`009` on new multi-ten
 4. `013_multitenant_storage.sql` — storage policies with `org_id/` prefix
 5. `014_product_notifications_grouping.sql` — grouping labels, notifications, push token table
 6. `015_email_notifications.sql` — email outbox, preferences, task watchers, unified notification events (see `docs/EMAIL_NOTIFICATIONS.md`)
+7. `016_email_design_preferences.sql` — date format, pause-all, in-app matrix columns, task email thread registry
 
 ## Product branding
 

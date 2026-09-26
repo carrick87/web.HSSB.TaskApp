@@ -4,6 +4,12 @@ import { getEmailConfig, isEmailSendingEnabled } from "./config";
 import { renderEmailTemplate } from "./render-template";
 import { buildUnsubscribeUrl } from "./unsubscribe";
 import { EMAIL_TEMPLATES } from "./templates-keys";
+import {
+  buildWorkspaceFromHeader,
+  mailDomainFromFrom,
+  outboundMessageId,
+  taskThreadRootMessageId,
+} from "./format";
 
 const MAX_ATTEMPTS = 5;
 
@@ -13,13 +19,27 @@ function backoffMs(attempts: number) {
 
 async function loadOrgBranding(admin: ReturnType<typeof createAdminClient>, orgId: string | null) {
   if (!orgId) {
-    return { orgId: "unknown", orgName: "Workspace", logoWidePath: null };
+    return { orgId: "unknown", orgName: "Workspace", logoWidePath: null, postalAddress: null as string | null };
   }
-  const { data } = await admin.from("organizations").select("id, name, logo_wide_path").eq("id", orgId).single();
+  const { data } = await admin
+    .from("organizations")
+    .select("id, name, logo_wide_path, address")
+    .eq("id", orgId)
+    .single();
   return {
     orgId: data?.id ?? orgId,
     orgName: data?.name ?? "Workspace",
     logoWidePath: data?.logo_wide_path ?? null,
+    postalAddress: data?.address ?? null,
+  };
+}
+
+async function loadRecipientLocale(admin: ReturnType<typeof createAdminClient>, userId: string | undefined) {
+  if (!userId) return { timezone: "Asia/Kuching", dateFormat: "DD/MM/YYYY" };
+  const { data } = await admin.from("profiles").select("timezone, date_format").eq("id", userId).maybeSingle();
+  return {
+    timezone: data?.timezone ?? "Asia/Kuching",
+    dateFormat: data?.date_format ?? "DD/MM/YYYY",
   };
 }
 
@@ -67,6 +87,18 @@ async function mergeBatchRows(
   return toSend;
 }
 
+function taskThreadHeaders(taskId: string | undefined, outboxId: string, fromEnv: string) {
+  if (!taskId) return {};
+  const domain = mailDomainFromFrom(fromEnv);
+  const root = taskThreadRootMessageId(taskId, domain);
+  const messageId = outboundMessageId(outboxId, domain);
+  return {
+    "Message-ID": messageId,
+    "In-Reply-To": root,
+    References: root,
+  };
+}
+
 export async function processEmailOutbox(limit = 40) {
   const admin = createAdminClient();
   const config = getEmailConfig();
@@ -97,12 +129,15 @@ export async function processEmailOutbox(limit = 40) {
         : undefined;
 
     const branding = await loadOrgBranding(admin, row.org_id);
+    const locale = await loadRecipientLocale(admin, recipientUserId);
     const rendered = await renderEmailTemplate({
       template: row.template,
       payload: row.payload as Record<string, unknown>,
       branding,
       appUrl: config.appUrl,
       unsubscribeUrl,
+      timezone: locale.timezone,
+      dateFormat: locale.dateFormat,
     });
 
     const headers: Record<string, string> = {};
@@ -111,11 +146,27 @@ export async function processEmailOutbox(limit = 40) {
       headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
     }
 
+    const taskId = row.payload.taskId as string | undefined;
+    if (row.template === EMAIL_TEMPLATES.TASK_ACTIVITY && taskId) {
+      Object.assign(headers, taskThreadHeaders(taskId, row.id, config.from));
+      const domain = mailDomainFromFrom(config.from);
+      await admin.from("email_task_threads").upsert({
+        task_id: taskId,
+        recipient_email: row.recipient_email.toLowerCase(),
+        root_message_id: taskThreadRootMessageId(taskId, domain),
+      });
+    }
+
+    const from = row.org_id ? buildWorkspaceFromHeader(branding.orgName, config.from) : config.from;
+
     if (!resend) {
       console.log("[email:dev]", {
+        from,
         to: row.recipient_email,
         subject: rendered.subject,
+        preheader: rendered.preheader,
         template: row.template,
+        headers,
         text: rendered.text.slice(0, 200),
       });
       await admin
@@ -128,7 +179,7 @@ export async function processEmailOutbox(limit = 40) {
 
     const { data, error } = await resend.emails.send(
       {
-        from: config.from,
+        from,
         to: row.recipient_email,
         subject: rendered.subject,
         html: rendered.html,
