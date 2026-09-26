@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
+import { writeOrgAuditLog } from "@/lib/org/audit";
 
 export async function GET() {
   const ctx = await getOrgApiContext();
@@ -45,8 +47,9 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const { username, email, password, role, branch_id, department_id, create_method } = body;
+  const method = create_method === "temp_password" ? "temp_password" : "invite";
 
-  if (!username?.trim() || username.trim().length < 3) {
+  if (method === "temp_password" && (!username?.trim() || username.trim().length < 3)) {
     return NextResponse.json({ error: "Username required" }, { status: 400 });
   }
   if (![ORG_ROLES.ADMIN, ORG_ROLES.MANAGER, ORG_ROLES.MEMBER].includes(role)) {
@@ -56,10 +59,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  const method = create_method === "temp_password" ? "temp_password" : "invite";
   const admin = createAdminClient();
 
-  // Simplified: temp password path (invite similar to prior admin route)
   if (method === "invite" && !email?.trim()) {
     return NextResponse.json({ error: "Email required for invite" }, { status: 400 });
   }
@@ -67,29 +68,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Password required" }, { status: 400 });
   }
 
-  const auth_email =
-    method === "invite" ? email.trim().toLowerCase() : `${crypto.randomUUID()}@taskapp.local`;
-
-  let userId: string;
   if (method === "invite") {
-    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(auth_email, {
-      data: { username: username.trim() },
-    });
-    if (inviteError || !invited.user) {
+    const emailNorm = email.trim().toLowerCase();
+    const { data: invite, error: inviteError } = await admin
+      .from("organization_invites")
+      .insert({
+        org_id: ctx.orgId,
+        email: emailNorm,
+        role,
+        status: "pending",
+        invited_by: ctx.userId,
+      })
+      .select("id, token")
+      .single();
+
+    if (inviteError || !invite) {
       return NextResponse.json({ error: inviteError?.message ?? "Invite failed" }, { status: 400 });
     }
-    userId = invited.user.id;
-  } else {
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email: auth_email,
-      password,
-      email_confirm: true,
+
+    const { enqueueWorkspaceInviteEmail } = await import("@/lib/email/membership-events");
+    await enqueueWorkspaceInviteEmail({
+      orgId: ctx.orgId,
+      email: emailNorm,
+      token: invite.token,
+      role,
+      inviterUserId: ctx.userId,
     });
-    if (createError || !created.user) {
-      return NextResponse.json({ error: createError?.message ?? "Create failed" }, { status: 400 });
-    }
-    userId = created.user.id;
+
+    await writeOrgAuditLog({
+      orgId: ctx.orgId,
+      actorId: ctx.userId,
+      targetId: undefined,
+      action: "member.invite_email",
+    });
+
+    return NextResponse.json({ ok: true, inviteId: invite.id });
   }
+
+  const auth_email = `${crypto.randomUUID()}@taskapp.local`;
+
+  let userId: string;
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email: auth_email,
+    password,
+    email_confirm: true,
+  });
+  if (createError || !created.user) {
+    return NextResponse.json({ error: createError?.message ?? "Create failed" }, { status: 400 });
+  }
+  userId = created.user.id;
 
   await admin.from("profiles").upsert({
     id: userId,
@@ -98,7 +125,7 @@ export async function POST(request: Request) {
     harrison_email: email?.trim() || null,
     role: "user",
     current_org_id: ctx.orgId,
-    must_change_password: method === "temp_password",
+    must_change_password: true,
   });
 
   await admin.from("organization_members").insert({
@@ -111,12 +138,11 @@ export async function POST(request: Request) {
     invited_by: ctx.userId,
   });
 
-  const { writeOrgAuditLog } = await import("@/lib/org/audit");
   await writeOrgAuditLog({
     orgId: ctx.orgId,
     actorId: ctx.userId,
     targetId: userId,
-    action: method === "invite" ? "member.invite" : "member.create_temp_password",
+    action: "member.create_temp_password",
   });
 
   return NextResponse.json({ id: userId });

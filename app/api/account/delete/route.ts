@@ -16,6 +16,13 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+  const { data: profileBefore } = await admin
+    .from("profiles")
+    .select("auth_email, harrison_email")
+    .eq("id", user.id)
+    .single();
+  const notifyEmail = profileBefore?.harrison_email ?? profileBefore?.auth_email;
+
   const transferTo = typeof body.transfer_owner_to === "string" ? body.transfer_owner_to.trim() : "";
   const deleteOrganization = body.delete_organization === true;
 
@@ -68,6 +75,11 @@ export async function POST(request: Request) {
   await admin.from("organization_members").delete().eq("user_id", user.id);
   await admin.from("profiles").delete().eq("id", user.id);
   await admin.auth.admin.deleteUser(user.id);
+
+  if (notifyEmail) {
+    const { notifyAccountDeletedEmail } = await import("@/lib/email/membership-events");
+    await notifyAccountDeletedEmail(notifyEmail);
+  }
 
   return NextResponse.json({ ok: true });
 }

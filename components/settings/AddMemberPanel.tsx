@@ -102,8 +102,8 @@ export function AddMemberPanel({ open, onClose, branches, departments, onCreated
         <input
           className="atlassian-input"
           placeholder="Username"
-          required
-          minLength={3}
+          required={createMethod === "temp_password"}
+          minLength={createMethod === "temp_password" ? 3 : undefined}
           value={form.username}
           onChange={(e) => setForm({ ...form, username: e.target.value })}
         />

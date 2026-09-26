@@ -57,5 +57,13 @@ export async function POST(request: Request) {
 
   await admin.from("profiles").update({ current_org_id: org.id, role: "user" }).eq("id", user.id);
 
+  const { data: ownerProfile } = await admin.from("profiles").select("username").eq("id", user.id).single();
+  const { notifyWelcomeWorkspace } = await import("@/lib/notifications/task-events");
+  await notifyWelcomeWorkspace({
+    orgId: org.id,
+    ownerUserId: user.id,
+    ownerName: ownerProfile?.username ?? "there",
+  });
+
   return NextResponse.json({ organization: org });
 }

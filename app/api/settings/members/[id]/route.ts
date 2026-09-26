@@ -101,5 +101,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     after: afterMember as Record<string, unknown>,
   });
 
+  if (role !== beforeMember.role) {
+    const { notifyRoleChanged } = await import("@/lib/notifications/task-events");
+    await notifyRoleChanged({
+      orgId: ctx.orgId,
+      targetUserId,
+      actorId: ctx.userId,
+      newRole: role,
+    });
+  }
+
   return NextResponse.json({ ok: true, member: afterMember });
 }

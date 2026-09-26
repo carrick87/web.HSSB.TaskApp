@@ -9,6 +9,7 @@ Apply **after** `001`–`005` (skip single-tenant `006`–`009` on new multi-ten
 3. `012_multitenant_rls.sql` — org-scoped RLS
 4. `013_multitenant_storage.sql` — storage policies with `org_id/` prefix
 5. `014_product_notifications_grouping.sql` — grouping labels, notifications, push token table
+6. `015_email_notifications.sql` — email outbox, preferences, task watchers, unified notification events (see `docs/EMAIL_NOTIFICATIONS.md`)
 
 ## Product branding
 

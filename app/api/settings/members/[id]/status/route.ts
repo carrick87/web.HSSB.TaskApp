@@ -73,5 +73,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     after: afterMember as Record<string, unknown>,
   });
 
+  if (status === "deactivated") {
+    const { notifyRemovedFromWorkspace } = await import("@/lib/notifications/task-events");
+    await notifyRemovedFromWorkspace({
+      orgId: ctx.orgId,
+      targetUserId,
+      actorId: ctx.userId,
+    });
+  }
+
   return NextResponse.json({ ok: true, member: afterMember });
 }

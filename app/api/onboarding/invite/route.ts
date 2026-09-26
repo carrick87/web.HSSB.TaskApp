@@ -17,20 +17,26 @@ export async function POST(request: Request) {
   for (const raw of emails) {
     const email = String(raw).trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
-    await admin.from("organization_invites").insert({
-      org_id: ctx.orgId,
-      email,
-      role: ORG_ROLES.MEMBER,
-      status: "pending",
-      invited_by: ctx.userId,
-    });
-    try {
-      await admin.auth.admin.inviteUserByEmail(email, {
-        data: { org_id: ctx.orgId },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/login`,
+    const { data: invite } = await admin
+      .from("organization_invites")
+      .insert({
+        org_id: ctx.orgId,
+        email,
+        role: ORG_ROLES.MEMBER,
+        status: "pending",
+        invited_by: ctx.userId,
+      })
+      .select("token")
+      .single();
+    if (invite?.token) {
+      const { enqueueWorkspaceInviteEmail } = await import("@/lib/email/membership-events");
+      await enqueueWorkspaceInviteEmail({
+        orgId: ctx.orgId,
+        email,
+        token: invite.token,
+        role: ORG_ROLES.MEMBER,
+        inviterUserId: ctx.userId,
       });
-    } catch {
-      /* invite email may fail in dev */
     }
   }
 

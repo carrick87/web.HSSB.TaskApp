@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       try {
         const { data: invite } = await admin
           .from("organization_invites")
-          .select("org_id, role")
+          .select("org_id, role, invited_by")
           .eq("email", emailRaw)
           .eq("status", "pending")
           .maybeSingle();
@@ -67,6 +67,14 @@ export async function POST(request: Request) {
             status: "active",
           });
           await admin.from("organization_invites").update({ status: "accepted" }).eq("email", emailRaw);
+          if (invite.invited_by) {
+            const { notifyInviteAccepted } = await import("@/lib/email/membership-events");
+            await notifyInviteAccepted({
+              orgId: invite.org_id,
+              inviterUserId: invite.invited_by,
+              inviteeUserId: authUser.user.id,
+            });
+          }
         }
       } catch {
         /* invites table not migrated yet */

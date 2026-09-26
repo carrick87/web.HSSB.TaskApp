@@ -125,6 +125,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings/organization': 'Organization',
   '/settings/members': 'Members',
   '/settings/account': 'Account',
+  '/settings/notifications': 'Notifications',
   '/notifications': 'Notifications',
   '/platform': 'Platform',
   '/admin/branches': 'Branches',
@@ -200,7 +201,10 @@ function getNavSections(orgRole: string, isPlatformAdmin: boolean): NavSection[]
 
   sections.push({
     title: "Account",
-    items: [{ href: "/settings/account", label: "Account & privacy", icon: <UserIcon /> }],
+    items: [
+      { href: "/settings/notifications", label: "Notifications", icon: <CogIcon /> },
+      { href: "/settings/account", label: "Account & privacy", icon: <UserIcon /> },
+    ],
   });
 
   if (isPlatformAdmin) {

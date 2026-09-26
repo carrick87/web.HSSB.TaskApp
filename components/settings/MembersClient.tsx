@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/admin/RoleBadge";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AddMemberPanel } from "@/components/settings/AddMemberPanel";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ORG_ROLES, formatOrgRoleLabel } from "@/lib/org/roles";
 
 type Branch = { id: string; name: string };

@@ -1,7 +1,8 @@
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createTask } from "@/lib/tasks-v2";
+import { notifyTaskAssigned } from "@/lib/notifications/task-events";
 import { getProjects } from "@/lib/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { TaskNewForm } from "@/components/pm/TaskNewForm";
@@ -31,6 +32,7 @@ export default async function NewTaskPage({
   async function handleCreate(formData: FormData) {
     "use server";
     const profile = await requireRole(["super_admin", "manager"]);
+    const ctx = await requireOrgContext();
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -61,6 +63,15 @@ export default async function NewTaskPage({
       console.error("Error creating task:", error);
       return;
     }
+
+    await notifyTaskAssigned({
+      orgId: ctx.org.id,
+      taskId: task.id,
+      taskTitle: task.title,
+      assigneeId: assignee_id,
+      actorId: profile.id,
+      previousAssigneeId: null,
+    });
 
     if (project_id) {
       redirect(`/pm/projects/${project_id}`);

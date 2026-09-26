@@ -25,7 +25,17 @@ export async function PATCH(request: Request) {
   }
 
   const admin = createAdminClient();
+  const { data: orgBefore } = await admin.from("organizations").select("status").eq("id", orgId).single();
   const { error } = await admin.from("organizations").update({ status }).eq("id", orgId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (orgBefore?.status !== status) {
+    const { notifyWorkspaceStatusChange } = await import("@/lib/email/membership-events");
+    await notifyWorkspaceStatusChange({
+      orgId,
+      suspended: status === "suspended",
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
