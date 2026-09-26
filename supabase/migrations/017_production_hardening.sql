@@ -92,6 +92,10 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  IF TG_OP = 'UPDATE' AND NEW.id IS DISTINCT FROM auth.uid() THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.role IS DISTINCT FROM OLD.role
      OR NEW.is_platform_admin IS DISTINCT FROM OLD.is_platform_admin
      OR NEW.status IS DISTINCT FROM OLD.status
@@ -126,7 +130,6 @@ DROP TRIGGER IF EXISTS profiles_self_update_guard ON public.profiles;
 CREATE TRIGGER profiles_self_update_guard
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
-  WHEN (auth.uid() = id)
   EXECUTE FUNCTION task_app.enforce_profiles_self_update();
 
 -- =============================================================================

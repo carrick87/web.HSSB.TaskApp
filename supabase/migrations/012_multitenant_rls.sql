@@ -2,6 +2,8 @@
 -- Drops legacy policies that used user_role() / global admin.
 
 -- Drop legacy policies from 001–007 (production names)
+DROP POLICY IF EXISTS "branches_select" ON public.branches;
+DROP POLICY IF EXISTS "departments_select" ON public.departments;
 DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
 DROP POLICY IF EXISTS "task_templates_select" ON public.task_templates;
@@ -86,6 +88,7 @@ DROP POLICY IF EXISTS "instances_admin_all" ON public.task_instances;
 DROP POLICY IF EXISTS "task_instances_org_select" ON public.task_instances;
 DROP POLICY IF EXISTS "task_instances_org_write" ON public.task_instances;
 DROP POLICY IF EXISTS "task_instances_org_update" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_org_insert" ON public.task_instances;
 DROP POLICY IF EXISTS "task_instances_org_delete" ON public.task_instances;
 CREATE POLICY "task_instances_org_select" ON public.task_instances FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
@@ -121,6 +124,10 @@ CREATE POLICY "projects_org_manager_write" ON public.projects FOR ALL TO authent
   USING (public.is_org_manager_or_above(org_id))
   WITH CHECK (public.is_org_manager_or_above(org_id));
 
+DROP POLICY IF EXISTS "tasks_org_member_select" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_org_member_insert" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_org_member_update" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_org_manager_delete" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_select" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_update" ON public.tasks;

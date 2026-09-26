@@ -4,6 +4,9 @@ import type { Profile } from "@/types/database.types";
 import type { OrgRole } from "./roles";
 import { isOrgAdminRole, isOrgManagerOrAbove, legacyProfileRoleToOrgRole } from "./roles";
 import { PRODUCT_BRAND, type Organization } from "./constants";
+import { getCurrentUser } from "@/lib/auth";
+import { getTestAuthBypassUserId } from "@/lib/test-auth-bypass";
+import { ORG_ROLES } from "./roles";
 
 export type { Organization };
 export { PRODUCT_BRAND };
@@ -23,7 +26,25 @@ export type OrgContext = {
   membership: OrgMembership;
 };
 
+import { buildMockOrgContext, MOCK_HSSB_ORG_ID } from "@/lib/test-auth-mock";
+
 export async function getUserOrganizations(userId: string) {
+  if (process.env.TEST_AUTH_MOCK === "1" && (await getTestAuthBypassUserId())) {
+    return [
+      {
+        org_id: MOCK_HSSB_ORG_ID,
+        role: ORG_ROLES.OWNER,
+        status: "active",
+        organizations: { id: MOCK_HSSB_ORG_ID, name: "Harrison Sabah Sdn Bhd", short_name: "HSSB", slug: "hssb", status: "active" },
+      },
+      {
+        org_id: "b2000000-0000-0000-0000-000000000002",
+        role: ORG_ROLES.MEMBER,
+        status: "active",
+        organizations: { id: "b2000000-0000-0000-0000-000000000002", name: "Demo Org Two", short_name: "DEMO2", slug: "demo-two", status: "active" },
+      },
+    ];
+  }
   try {
     const supabase = await createClient();
     const { data } = await supabase
@@ -96,12 +117,17 @@ export function legacyOrgContext(profile: Profile): OrgContext {
 }
 
 export async function requireOrgContext(): Promise<OrgContext> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const bypassId = await getTestAuthBypassUserId();
+  if (bypassId && process.env.TEST_AUTH_MOCK === "1") {
+    const memberId = process.env.TEST_AUTH_MEMBER_ID ?? "78925121-0000-4000-8000-000000000006";
+    const role = bypassId === memberId ? ORG_ROLES.MEMBER : ORG_ROLES.OWNER;
+    return buildMockOrgContext(bypassId, role);
+  }
+
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("*, branch:branches(*), department:departments(*)")

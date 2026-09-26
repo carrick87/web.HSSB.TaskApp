@@ -1,6 +1,11 @@
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database.types";
 import { redirect } from "next/navigation";
+import { getTestAuthBypassUserId } from "@/lib/test-auth-bypass";
+import { buildMockOrgContext } from "@/lib/test-auth-mock";
+import { ORG_ROLES, type OrgRole } from "@/lib/org/roles";
+import type { ProfileRole } from "@/lib/roles";
 import {
   requireOrgAdmin,
   requireOrgContext,
@@ -8,11 +13,12 @@ import {
   legacyOrgContext,
   getActiveOrganization,
 } from "@/lib/org/context";
-import type { OrgRole } from "@/lib/org/roles";
-import { ORG_ROLES } from "@/lib/org/roles";
-import type { ProfileRole } from "@/lib/roles";
 
 export async function getCurrentUser() {
+  const bypassId = await getTestAuthBypassUserId();
+  if (bypassId) {
+    return { id: bypassId, email: "test-bypass@taskapp.local" } as User;
+  }
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
@@ -20,6 +26,13 @@ export async function getCurrentUser() {
 }
 
 export async function getCurrentProfile(): Promise<Profile | null> {
+  const bypassId = await getTestAuthBypassUserId();
+  if (bypassId && process.env.TEST_AUTH_MOCK === "1") {
+    const memberId = process.env.TEST_AUTH_MEMBER_ID ?? "78925121-0000-4000-8000-000000000006";
+    const role = bypassId === memberId ? ORG_ROLES.MEMBER : ORG_ROLES.OWNER;
+    return buildMockOrgContext(bypassId, role).profile;
+  }
+
   const user = await getCurrentUser();
   if (!user) return null;
   const supabase = await createClient();

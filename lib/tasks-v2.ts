@@ -244,6 +244,9 @@ export async function deleteTaskAttachment(id: string): Promise<{ error: string 
 }
 
 export async function checkTablesExist(): Promise<boolean> {
+  if (process.env.TEST_AUTH_BYPASS === "1" && process.env.TEST_AUTH_MOCK === "1") {
+    return true;
+  }
   const supabase = await createClient();
   try {
     const { error } = await supabase
