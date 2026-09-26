@@ -7,7 +7,7 @@ export default function LeaderboardLayout({
 }) {
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</div>
+      <div>{children}</div>
     </AppLayout>
   );
 }

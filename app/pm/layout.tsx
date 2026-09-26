@@ -13,7 +13,7 @@ export default async function PMLayout({
   if (!tablesExist) {
     return (
       <AppLayout>
-        <div className="p-4 lg:p-6 pt-16 lg:pt-6">
+        <div>
           <div className="bg-atlassian-yellow-light border border-yellow-200 rounded-atlassian p-6">
             <h2 className="text-base font-semibold text-yellow-800 mb-2">
               Database Setup Required
@@ -34,7 +34,7 @@ export default async function PMLayout({
 
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 pt-16 lg:pt-6">
+      <div>
         {children}
       </div>
     </AppLayout>
