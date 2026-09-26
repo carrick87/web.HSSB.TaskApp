@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { validateCompanyPayload } from "../lib/company/validate";
-import { validateLogoUpload } from "../lib/company/validate-logo";
+import { validateLogoUploadMeta } from "../lib/company/validate-logo";
 import { COMPANY_LOGO_MAX_BYTES } from "../lib/company/constants";
 import {
   isSuperAdmin,
@@ -39,10 +39,10 @@ test.describe("company validation", () => {
   });
 
   test("logo mime and size", () => {
-    expect(validateLogoUpload({ type: "image/png", size: 1000 }).ok).toBe(true);
-    expect(validateLogoUpload({ type: "application/pdf", size: 1000 }).error).toBeTruthy();
+    expect(validateLogoUploadMeta({ type: "image/png", size: 1000 }).ok).toBe(true);
+    expect(validateLogoUploadMeta({ type: "image/webp", size: 1000 }).error).toBeTruthy();
     expect(
-      validateLogoUpload({ type: "image/png", size: COMPANY_LOGO_MAX_BYTES + 1 }).error
+      validateLogoUploadMeta({ type: "image/png", size: COMPANY_LOGO_MAX_BYTES + 1 }).error
     ).toBeTruthy();
   });
 });

@@ -1,11 +1,27 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getPublicCompanyProfile } from "@/lib/company/profile";
+import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
 import { DEFAULT_COMPANY } from "@/lib/company/constants";
 
 export async function generateMetadata(): Promise<Metadata> {
   const company = await getPublicCompanyProfile();
   const title = `${company.name} — ${company.tagline ?? DEFAULT_COMPANY.tagline}`;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const squareUrl = getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
+  const fallbackIcons = {
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  };
+  const dynamicIcons = squareUrl
+    ? {
+        icon: [{ url: squareUrl, sizes: "512x512", type: "image/png" }],
+        apple: [{ url: squareUrl, sizes: "180x180", type: "image/png" }],
+      }
+    : fallbackIcons;
 
   return {
     title,
@@ -19,15 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     formatDetection: {
       telephone: false,
     },
-    icons: {
-      icon: [
-        { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-        { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      ],
-      apple: [
-        { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-      ],
-    },
+    icons: dynamicIcons,
   };
 }
 
@@ -68,11 +76,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const company = await getPublicCompanyProfile();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const squareUrl = getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
+  const appleIcon = squareUrl || "/icons/apple-touch-icon.png";
 
   return (
     <html lang="en" style={{ colorScheme: "light" }}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href={appleIcon} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content={company.short_name || company.name} />

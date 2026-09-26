@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { formatRoleLabel } from "@/lib/roles";
+import { RoleBadge } from "@/components/admin/RoleBadge";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { AddUserPanel } from "@/components/admin/AddUserPanel";
+import { ROLES } from "@/lib/roles";
 
 type Branch = { id: string; name: string };
 type Department = { id: string; name: string; branch_id: string };
@@ -37,6 +39,18 @@ type Props = {
   currentUserId: string;
 };
 
+function countActiveSuperAdmins(users: UserRow[]) {
+  return users.filter((u) => u.role === ROLES.SUPER_ADMIN && u.status === "active").length;
+}
+
+function isLastActiveSuperAdmin(user: UserRow, users: UserRow[]) {
+  return (
+    user.role === ROLES.SUPER_ADMIN &&
+    user.status === "active" &&
+    countActiveSuperAdmins(users) <= 1
+  );
+}
+
 export function UserManagementClient({
   initialUsers,
   branches,
@@ -47,18 +61,17 @@ export function UserManagementClient({
   const [users, setUsers] = useState(initialUsers);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [newUser, setNewUser] = useState({
-    username: "",
-    email: "",
-    password: "",
-    role: "user",
-    branch_id: "",
-    department_id: "",
-  });
+  const [roleConfirm, setRoleConfirm] = useState<{
+    userId: string;
+    newRole: string;
+    username: string;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -69,10 +82,14 @@ export function UserManagementClient({
         (u.harrison_email ?? "").toLowerCase().includes(q) ||
         u.auth_email.toLowerCase().includes(q);
       const matchesRole = roleFilter === "all" || u.role === roleFilter;
-      const matchesStatus = statusFilter === "all" || u.status === statusFilter;
-      return matchesQuery && matchesRole && matchesStatus;
+      const matchesBranch = branchFilter === "all" || u.branch_id === branchFilter;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && u.status === "active") ||
+        (statusFilter === "inactive" && u.status === "deactivated");
+      return matchesQuery && matchesRole && matchesBranch && matchesStatus;
     });
-  }, [users, query, roleFilter, statusFilter]);
+  }, [users, query, roleFilter, branchFilter, statusFilter]);
 
   async function refreshUsers() {
     const res = await fetch("/api/admin/users");
@@ -81,7 +98,7 @@ export function UserManagementClient({
     setUsers(data.users ?? []);
   }
 
-  async function updateUser(id: string, patch: Partial<UserRow>) {
+  async function applyUserUpdate(id: string, patch: Partial<UserRow>) {
     setError(null);
     const existing = users.find((u) => u.id === id);
     if (!existing) return;
@@ -99,13 +116,38 @@ export function UserManagementClient({
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error ?? "Update failed.");
-      return;
+      return false;
     }
     setMessage("User updated.");
     await refreshUsers();
+    return true;
+  }
+
+  function requestRoleChange(user: UserRow, newRole: string) {
+    if (user.id === currentUserId) return;
+    if (newRole === user.role) return;
+    const touchesSuperAdmin =
+      newRole === ROLES.SUPER_ADMIN || user.role === ROLES.SUPER_ADMIN;
+    if (touchesSuperAdmin) {
+      setRoleConfirm({ userId: user.id, newRole, username: user.username });
+      return;
+    }
+    void applyUserUpdate(user.id, { role: newRole });
+  }
+
+  async function confirmRoleChange() {
+    if (!roleConfirm) return;
+    setConfirmLoading(true);
+    const ok = await applyUserUpdate(roleConfirm.userId, { role: roleConfirm.newRole });
+    setConfirmLoading(false);
+    if (ok) setRoleConfirm(null);
   }
 
   async function toggleStatus(user: UserRow) {
+    if (user.status === "active" && isLastActiveSuperAdmin(user, users)) {
+      setError("Cannot deactivate the last active super admin.");
+      return;
+    }
     const next = user.status === "active" ? "deactivated" : "active";
     const res = await fetch(`/api/admin/users/${user.id}/status`, {
       method: "PATCH",
@@ -121,51 +163,52 @@ export function UserManagementClient({
     await refreshUsers();
   }
 
-  async function createUser(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const res = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newUser),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error ?? "Could not create user.");
-      return;
-    }
-    setShowAdd(false);
-    setNewUser({ username: "", email: "", password: "", role: "user", branch_id: "", department_id: "" });
-    setMessage("User created.");
-    await refreshUsers();
-  }
+  const lastSuperAdminHint =
+    "This is the only active super admin. Promote another super admin or deactivate someone else first.";
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl overflow-x-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-neutral-1000">User Management</h1>
-          <p className="text-sm text-neutral-700 mt-0.5">Manage roles, branches, departments, and account status.</p>
+          <p className="text-sm text-neutral-700 mt-0.5">Manage roles, branches, and account status.</p>
         </div>
-        <Button type="button" onClick={() => setShowAdd(true)}>Add user</Button>
+        <Button type="button" onClick={() => setShowAdd(true)} className="min-h-[44px]">
+          Add user
+        </Button>
       </div>
 
-      {error && <div className="rounded-atlassian border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
-      {message && <div className="rounded-atlassian border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{message}</div>}
+      {error && (
+        <div className="rounded-atlassian border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+      )}
+      {message && (
+        <div className="rounded-atlassian border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{message}</div>
+      )}
 
       <Card>
-        <CardContent className="py-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input className="atlassian-input md:col-span-1" placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select className="atlassian-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+        <CardContent className="py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <input
+            className="atlassian-input lg:col-span-1 sm:col-span-2"
+            placeholder="Search name or email"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select className="atlassian-select min-h-[44px]" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="all">All roles</option>
             <option value="super_admin">Super Admin</option>
             <option value="manager">Manager</option>
             <option value="user">User</option>
           </select>
-          <select className="atlassian-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select className="atlassian-select min-h-[44px]" value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
+            <option value="all">All branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          <select className="atlassian-select min-h-[44px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">All statuses</option>
             <option value="active">Active</option>
-            <option value="deactivated">Deactivated</option>
+            <option value="inactive">Inactive</option>
           </select>
         </CardContent>
       </Card>
@@ -178,74 +221,163 @@ export function UserManagementClient({
               <th className="py-2 pr-3">Email</th>
               <th className="py-2 pr-3">Role</th>
               <th className="py-2 pr-3">Branch</th>
-              <th className="py-2 pr-3">Department</th>
               <th className="py-2 pr-3">Status</th>
               <th className="py-2 pr-3">Last sign-in</th>
               <th className="py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => (
-              <tr key={u.id} className="border-b border-neutral-100 align-top">
-                <td className="py-3 pr-3">
-                  <input
-                    className="atlassian-input min-h-[44px] py-2"
-                    defaultValue={u.username}
-                    onBlur={(e) => e.target.value !== u.username && updateUser(u.id, { username: e.target.value })}
-                  />
-                </td>
-                <td className="py-3 pr-3 text-neutral-700">{u.harrison_email ?? u.auth_email}</td>
-                <td className="py-3 pr-3">
-                  <select
-                    className="atlassian-select min-h-[44px]"
-                    value={u.role}
-                    onChange={(e) => updateUser(u.id, { role: e.target.value })}
-                    disabled={u.id === currentUserId && u.role === "super_admin"}
-                  >
-                    <option value="super_admin">Super Admin</option>
-                    <option value="manager">Manager</option>
-                    <option value="user">User</option>
-                  </select>
-                </td>
-                <td className="py-3 pr-3">{u.branch?.name ?? "—"}</td>
-                <td className="py-3 pr-3">{u.department?.name ?? "—"}</td>
-                <td className="py-3 pr-3"><Badge className={u.status === "active" ? "bg-green-100 text-green-800" : "bg-neutral-200"}>{u.status}</Badge></td>
-                <td className="py-3 pr-3 text-neutral-700">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "—"}</td>
-                <td className="py-3 space-y-2">
-                  <Button type="button" variant="secondary" onClick={() => toggleStatus(u)}>
-                    {u.status === "active" ? "Deactivate" : "Reactivate"}
-                  </Button>
-                  <Link href={`/admin/users/${u.id}`} className="block text-xs text-brand-700 hover:underline">
-                    Edit / set password
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((u) => {
+              const inactive = u.status === "deactivated";
+              const lastSa = isLastActiveSuperAdmin(u, users);
+              const self = u.id === currentUserId;
+              return (
+                <tr
+                  key={u.id}
+                  className={`border-b border-neutral-100 align-top ${inactive ? "opacity-75" : ""}`}
+                >
+                  <td className="py-3 pr-3">
+                    <input
+                      className="atlassian-input min-h-[44px] py-2"
+                      defaultValue={u.username}
+                      onBlur={(e) => e.target.value !== u.username && applyUserUpdate(u.id, { username: e.target.value })}
+                    />
+                  </td>
+                  <td className="py-3 pr-3 text-neutral-800">{u.harrison_email ?? u.auth_email}</td>
+                  <td className="py-3 pr-3 space-y-2">
+                    <RoleBadge role={u.role} />
+                    <select
+                      className="atlassian-select min-h-[44px] w-full max-w-[180px]"
+                      value={u.role}
+                      disabled={self || (lastSa && u.role === ROLES.SUPER_ADMIN)}
+                      title={
+                        self
+                          ? "You cannot change your own role."
+                          : lastSa && u.role === ROLES.SUPER_ADMIN
+                            ? lastSuperAdminHint
+                            : undefined
+                      }
+                      onChange={(e) => requestRoleChange(u, e.target.value)}
+                    >
+                      <option value="super_admin">Super Admin</option>
+                      <option value="manager" disabled={lastSa && u.role === ROLES.SUPER_ADMIN}>
+                        Manager
+                      </option>
+                      <option value="user" disabled={lastSa && u.role === ROLES.SUPER_ADMIN}>
+                        User
+                      </option>
+                    </select>
+                    {self && <p className="text-xs text-neutral-700">You cannot change your own role.</p>}
+                  </td>
+                  <td className="py-3 pr-3 text-neutral-800">{u.branch?.name ?? "—"}</td>
+                  <td className="py-3 pr-3">
+                    {inactive ? (
+                      <span className="inline-flex px-2 py-1 rounded-atlassian text-xs font-medium bg-neutral-200 text-neutral-800">
+                        Inactive
+                      </span>
+                    ) : (
+                      <span className="text-neutral-800">Active</span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-3 text-neutral-700">
+                    {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "—"}
+                  </td>
+                  <td className="py-3 space-y-2">
+                    {inactive ? (
+                      <Button type="button" variant="secondary" className="min-h-[44px]" onClick={() => toggleStatus(u)}>
+                        Reactivate
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="min-h-[44px]"
+                          disabled={lastSa}
+                          title={lastSa ? lastSuperAdminHint : undefined}
+                          onClick={() => toggleStatus(u)}
+                        >
+                          Deactivate
+                        </Button>
+                        {lastSa && <p className="text-xs text-neutral-700 max-w-[200px]">{lastSuperAdminHint}</p>}
+                      </>
+                    )}
+                    <Link href={`/admin/users/${u.id}`} className="block text-xs text-brand-700 hover:underline">
+                      Edit / set password
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="lg:hidden space-y-3">
-        {filtered.map((u) => (
-          <Card key={u.id}>
-            <CardHeader><CardTitle>{u.username}</CardTitle></CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p className="text-neutral-700">{u.harrison_email ?? u.auth_email}</p>
-              <p>{formatRoleLabel(u.role)} · {u.status}</p>
-              <p>{u.branch?.name ?? "No branch"} / {u.department?.name ?? "No department"}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={() => toggleStatus(u)}>
-                  {u.status === "active" ? "Deactivate" : "Reactivate"}
-                </Button>
-                <Link href={`/admin/users/${u.id}`} className="text-brand-700 text-sm self-center">Edit</Link>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {filtered.map((u) => {
+          const inactive = u.status === "deactivated";
+          const lastSa = isLastActiveSuperAdmin(u, users);
+          const self = u.id === currentUserId;
+          return (
+            <Card key={u.id} className={inactive ? "opacity-75" : undefined}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-neutral-900">{u.username}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="text-neutral-800">{u.harrison_email ?? u.auth_email}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <RoleBadge role={u.role} />
+                  {inactive ? (
+                    <span className="inline-flex px-2 py-1 rounded-atlassian text-xs font-medium bg-neutral-200 text-neutral-800">
+                      Inactive
+                    </span>
+                  ) : (
+                    <span className="text-neutral-700">Active</span>
+                  )}
+                </div>
+                <p className="text-neutral-800">{u.branch?.name ?? "No branch"}</p>
+                {!self && (
+                  <select
+                    className="atlassian-select min-h-[44px] w-full"
+                    value={u.role}
+                    onChange={(e) => requestRoleChange(u, e.target.value)}
+                  >
+                    <option value="super_admin">Super Admin</option>
+                    <option value="manager">Manager</option>
+                    <option value="user">User</option>
+                  </select>
+                )}
+                {self && <p className="text-xs text-neutral-700">You cannot change your own role.</p>}
+                <div className="flex flex-wrap gap-2">
+                  {inactive ? (
+                    <Button type="button" variant="secondary" className="min-h-[44px]" onClick={() => toggleStatus(u)}>
+                      Reactivate
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="min-h-[44px]"
+                      disabled={lastSa}
+                      onClick={() => toggleStatus(u)}
+                    >
+                      Deactivate
+                    </Button>
+                  )}
+                  {lastSa && !inactive && (
+                    <p className="text-xs text-neutral-700 w-full">{lastSuperAdminHint}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Recent audit log</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Recent audit log</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {auditLogs.length === 0 && <p className="text-neutral-700">No audit entries yet.</p>}
           {auditLogs.map((log) => (
@@ -257,37 +389,30 @@ export function UserManagementClient({
         </CardContent>
       </Card>
 
-      {showAdd && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CardHeader><CardTitle>Add user</CardTitle></CardHeader>
-            <CardContent>
-              <form className="space-y-3" onSubmit={createUser}>
-                <input className="atlassian-input" placeholder="Username" required value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
-                <input className="atlassian-input" placeholder="Harrison email (optional)" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                <input className="atlassian-input" type="password" placeholder="Temporary password" required value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
-                <select className="atlassian-select" value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
-                  <option value="user">User</option>
-                  <option value="manager">Manager</option>
-                  <option value="super_admin">Super Admin</option>
-                </select>
-                <select className="atlassian-select" value={newUser.branch_id} onChange={(e) => setNewUser({ ...newUser, branch_id: e.target.value })}>
-                  <option value="">Branch</option>
-                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-                <select className="atlassian-select" value={newUser.department_id} onChange={(e) => setNewUser({ ...newUser, department_id: e.target.value })}>
-                  <option value="">Department</option>
-                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <div className="flex gap-2 justify-end pt-2">
-                  <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
-                  <Button type="submit">Create user</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <AddUserPanel
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        branches={branches}
+        departments={departments}
+        onCreated={() => {
+          setMessage("User created.");
+          void refreshUsers();
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!roleConfirm}
+        title="Change super admin role?"
+        message={
+          roleConfirm
+            ? `Confirm changing ${roleConfirm.username}'s role to or from Super Admin. This takes effect immediately.`
+            : ""
+        }
+        confirmLabel="Change role"
+        onConfirm={() => void confirmRoleChange()}
+        onCancel={() => setRoleConfirm(null)}
+        loading={confirmLoading}
+      />
     </div>
   );
 }

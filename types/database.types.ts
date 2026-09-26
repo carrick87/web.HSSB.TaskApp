@@ -42,6 +42,7 @@ export interface Profile {
   department_id: string | null;
   role: ProfileRole;
   status?: "active" | "deactivated";
+  must_change_password?: boolean;
   last_sign_in_at?: string | null;
   created_at: string;
   branch?: Branch | null;

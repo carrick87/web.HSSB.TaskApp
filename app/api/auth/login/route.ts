@@ -17,10 +17,10 @@ export async function POST(request: Request) {
 
     const username = login;
     const admin = createAdminClient();
-    let profile: { auth_email: string; status?: string } | null = null;
+    let profile: { auth_email: string; status?: string; must_change_password?: boolean } | null = null;
     const primary = await admin
       .from("profiles")
-      .select("auth_email, status")
+      .select("auth_email, status, must_change_password")
       .eq("username", username)
       .maybeSingle();
 
@@ -71,7 +71,9 @@ export async function POST(request: Request) {
       .update({ last_sign_in_at: new Date().toISOString() })
       .eq("username", username);
 
-    return NextResponse.json({ user: data.user });
+    const mustChange = profile.must_change_password === true;
+
+    return NextResponse.json({ user: data.user, mustChangePassword: mustChange });
   } catch {
     return NextResponse.json(
       { error: "An error occurred." },

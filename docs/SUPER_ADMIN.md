@@ -7,6 +7,7 @@ See the pull request description for STEP 0 findings, migration order, env vars,
 1. `supabase/migrations/006_super_admin_foundation.sql`
 2. `supabase/migrations/007_rls_super_admin_policies.sql`
 3. `supabase/migrations/008_company_branding_storage.sql`
+4. `supabase/migrations/009_company_dual_logos_and_password_flag.sql`
 
 ## Initial super admin
 

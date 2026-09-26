@@ -47,6 +47,10 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
         setLoading(false);
         return;
       }
+      if (data.mustChangePassword) {
+        router.push("/profile?changePassword=1");
+        return;
+      }
       router.push(redirect);
       router.refresh();
     } catch {

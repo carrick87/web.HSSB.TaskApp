@@ -1,4 +1,4 @@
-import { COMPANY_NAME_MAX_LENGTH } from "./constants";
+import { COMPANY_NAME_MAX_LENGTH, COMPANY_SHORT_NAME_MAX_LENGTH } from "./constants";
 
 export function validateCompanyPayload(body: Record<string, unknown>) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -7,7 +7,7 @@ export function validateCompanyPayload(body: Record<string, unknown>) {
   }
   const short_name =
     typeof body.short_name === "string" && body.short_name.trim()
-      ? body.short_name.trim().slice(0, 40)
+      ? body.short_name.trim().slice(0, COMPANY_SHORT_NAME_MAX_LENGTH)
       : null;
   const optionalText = (key: string, max = 500) =>
     typeof body[key] === "string" && body[key].trim() ? String(body[key]).trim().slice(0, max) : null;

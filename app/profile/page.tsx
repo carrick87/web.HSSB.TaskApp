@@ -1,9 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { ForcePasswordChange } from "@/components/profile/ForcePasswordChange";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ changePassword?: string }>;
+}) {
   const profile = await requireProfile();
+  const params = await searchParams;
+  const forcePassword = profile.must_change_password === true || params.changePassword === "1";
   const supabase = await createClient();
 
   const { data: stats } = await supabase
@@ -38,6 +45,8 @@ export default async function ProfilePage() {
           View your account details and performance
         </p>
       </div>
+
+      <ForcePasswordChange required={forcePassword} />
       
       <Card>
         <CardHeader>

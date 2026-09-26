@@ -10,7 +10,9 @@ export function mergeCompanyProfile(row: Partial<CompanyProfile> | null): Compan
     name: row.name?.trim() || DEFAULT_COMPANY.name,
     short_name: row.short_name?.trim() || row.name?.trim() || DEFAULT_COMPANY.short_name,
     tagline: DEFAULT_COMPANY.tagline,
-    logo_path: row.logo_path ?? null,
+    logo_wide_path:
+      row.logo_wide_path ?? row.logo_path ?? null,
+    logo_square_path: row.logo_square_path ?? null,
     registration_no: row.registration_no ?? null,
     address: row.address ?? null,
     phone: row.phone ?? null,
@@ -27,7 +29,9 @@ export async function getPublicCompanyProfile(): Promise<CompanyProfile> {
     const supabase = await createClient();
     const { data } = await supabase
       .from("company_profile")
-      .select("name, short_name, logo_path, registration_no, address, phone, email, website, updated_at, updated_by")
+      .select(
+        "name, short_name, logo_wide_path, logo_square_path, registration_no, address, phone, email, website, updated_at, updated_by"
+      )
       .eq("id", COMPANY_ROW_ID)
       .maybeSingle();
     return mergeCompanyProfile(data as Partial<CompanyProfile> | null);

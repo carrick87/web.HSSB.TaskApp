@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
-import { getPublicCompanyProfile, getCompanyLogoPublicUrl } from "@/lib/company/profile";
+import { getPublicCompanyProfile } from "@/lib/company/profile";
+import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
 
 export async function GET() {
   const company = await getPublicCompanyProfile();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const logoUrl = getCompanyLogoPublicUrl(supabaseUrl, company.logo_path);
+  const squareUrl = getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
 
-  const icons = logoUrl
+  const icons = squareUrl
     ? [
-        { src: logoUrl, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: logoUrl, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: squareUrl, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: squareUrl, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: squareUrl, sizes: "512x512", type: "image/png", purpose: "maskable" },
       ]
     : [
         { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

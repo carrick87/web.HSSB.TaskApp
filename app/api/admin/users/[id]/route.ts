@@ -34,6 +34,10 @@ export async function PUT(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  if (id === auth.userId && role !== before.role) {
+    return NextResponse.json({ error: "You cannot change your own role." }, { status: 400 });
+  }
+
   if (
     id === auth.userId &&
     before.role === ROLES.SUPER_ADMIN &&
