@@ -93,145 +93,159 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-xl bg-white dark:bg-slate-800 shadow-lg p-8">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-        TaskApp
-      </h1>
-      <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">
-        Harrison Sabah Sdn Bhd
-      </p>
-
-      <div className="flex rounded-lg bg-slate-100 dark:bg-slate-700 p-1 mb-6">
-        <button
-          type="button"
-          onClick={() => { setMode("signin"); setError(null); }}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === "signin"
-              ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-          }`}
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode("signup"); setError(null); }}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === "signup"
-              ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-          }`}
-        >
-          Sign up
-        </button>
+    <div className="w-full max-w-[400px]">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-700 rounded-atlassian mb-4">
+          <span className="text-white font-bold text-2xl">HS</span>
+        </div>
+        <h1 className="text-2xl font-semibold text-neutral-1000 mb-1">
+          TaskApp
+        </h1>
+        <p className="text-neutral-600 text-sm">
+          Harrison Sabah Sdn Bhd
+        </p>
       </div>
 
-      {mode === "signin" ? (
-        <form onSubmit={handleSignIn} className="space-y-4">
-          <div>
-            <label htmlFor="login" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Username
-            </label>
-            <input
-              id="login"
-              type="text"
-              value={login}
-              onChange={(e) => setLogin(e.target.value)}
-              placeholder="Enter username"
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoComplete="username"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoComplete="current-password"
-              required
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
+      <div className="bg-white rounded-atlassian shadow-atlassian-md p-8">
+        <div className="flex rounded-atlassian bg-neutral-100 p-1 mb-6">
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 py-2.5 font-medium hover:opacity-90 disabled:opacity-50"
+            type="button"
+            onClick={() => { setMode("signin"); setError(null); }}
+            className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
+              mode === "signin"
+                ? "bg-white text-neutral-1000 shadow-atlassian-sm"
+                : "text-neutral-600 hover:text-neutral-900"
+            }`}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            Sign in
           </button>
-        </form>
-      ) : (
-        <form onSubmit={handleSignUp} className="space-y-4">
-          <div>
-            <label htmlFor="signup-username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Username
-            </label>
-            <input
-              id="signup-username"
-              type="text"
-              value={signupUsername}
-              onChange={(e) => setSignupUsername(e.target.value)}
-              placeholder="e.g. johndoe"
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoComplete="username"
-              required
-              minLength={2}
-            />
-          </div>
-          <div>
-            <label htmlFor="signup-email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Email (Harrison, for recording — optional)
-            </label>
-            <input
-              id="signup-email"
-              type="email"
-              value={signupEmail}
-              onChange={(e) => setSignupEmail(e.target.value)}
-              placeholder={`you${HARISON_EMAIL_SUFFIX}`}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoComplete="email"
-            />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">For records only; not used for login.</p>
-          </div>
-          <div>
-            <label htmlFor="signup-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Password
-            </label>
-            <input
-              id="signup-password"
-              type="password"
-              value={signupPassword}
-              onChange={(e) => setSignupPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoComplete="new-password"
-              required
-              minLength={6}
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 py-2.5 font-medium hover:opacity-90 disabled:opacity-50"
+            type="button"
+            onClick={() => { setMode("signup"); setError(null); }}
+            className={`flex-1 rounded-atlassian py-2 text-sm font-medium transition-all ${
+              mode === "signup"
+                ? "bg-white text-neutral-1000 shadow-atlassian-sm"
+                : "text-neutral-600 hover:text-neutral-900"
+            }`}
           >
-            {loading ? "Creating account…" : "Sign up"}
+            Sign up
           </button>
-        </form>
-      )}
+        </div>
 
-      <p className="mt-4 text-center text-sm text-slate-500">
-        <Link href="/" className="text-blue-600 hover:underline">Back to home</Link>
+        {mode === "signin" ? (
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div>
+              <label htmlFor="login" className="atlassian-label">
+                Username
+              </label>
+              <input
+                id="login"
+                type="text"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder="Enter your username"
+                className="atlassian-input"
+                autoComplete="username"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="atlassian-label">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="atlassian-input"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            {error && (
+              <div className="bg-atlassian-red-light border border-red-200 rounded-atlassian px-3 py-2">
+                <p className="text-sm text-atlassian-red">{error}</p>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-atlassian bg-brand-700 text-white font-medium hover:bg-brand-800 active:bg-brand-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-atlassian-sm"
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSignUp} className="space-y-4">
+            <div>
+              <label htmlFor="signup-username" className="atlassian-label">
+                Username
+              </label>
+              <input
+                id="signup-username"
+                type="text"
+                value={signupUsername}
+                onChange={(e) => setSignupUsername(e.target.value)}
+                placeholder="e.g. johndoe"
+                className="atlassian-input"
+                autoComplete="username"
+                required
+                minLength={2}
+              />
+            </div>
+            <div>
+              <label htmlFor="signup-email" className="atlassian-label">
+                Email (optional)
+              </label>
+              <input
+                id="signup-email"
+                type="email"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)}
+                placeholder={`you${HARISON_EMAIL_SUFFIX}`}
+                className="atlassian-input"
+                autoComplete="email"
+              />
+              <p className="mt-1.5 text-xs text-neutral-500">Harrison email only. For records; not used for login.</p>
+            </div>
+            <div>
+              <label htmlFor="signup-password" className="atlassian-label">
+                Password
+              </label>
+              <input
+                id="signup-password"
+                type="password"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="atlassian-input"
+                autoComplete="new-password"
+                required
+                minLength={6}
+              />
+            </div>
+            {error && (
+              <div className="bg-atlassian-red-light border border-red-200 rounded-atlassian px-3 py-2">
+                <p className="text-sm text-atlassian-red">{error}</p>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-atlassian bg-brand-700 text-white font-medium hover:bg-brand-800 active:bg-brand-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-atlassian-sm"
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <p className="mt-6 text-center text-sm text-neutral-500">
+        <Link href="/" className="text-brand-700 hover:text-brand-800 hover:underline">
+          Back to home
+        </Link>
       </p>
     </div>
   );

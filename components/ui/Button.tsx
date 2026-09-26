@@ -1,33 +1,40 @@
 import { forwardRef } from "react";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "danger" | "ghost";
+  variant?: "primary" | "secondary" | "danger" | "ghost" | "link" | "subtle";
   size?: "sm" | "md" | "lg";
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = "", variant = "primary", size = "md", ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+      "inline-flex items-center justify-center font-medium rounded-atlassian transition-all focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-50 disabled:cursor-not-allowed";
+    
     const variants = {
       primary:
-        "bg-slate-800 text-white hover:bg-slate-700 focus:ring-slate-500 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300",
+        "bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900 shadow-atlassian-sm",
       secondary:
-        "bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-500",
+        "bg-neutral-200 text-neutral-800 hover:bg-neutral-300 active:bg-neutral-400",
       danger:
-        "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+        "bg-atlassian-red text-white hover:bg-red-600 active:bg-red-700 shadow-atlassian-sm",
       ghost:
-        "bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-400 dark:text-slate-300 dark:hover:bg-slate-700",
+        "bg-transparent text-neutral-700 hover:bg-neutral-200 active:bg-neutral-300",
+      link:
+        "bg-transparent text-brand-700 hover:text-brand-800 hover:underline p-0",
+      subtle:
+        "bg-transparent text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200",
     };
+    
     const sizes = {
-      sm: "px-3 py-1.5 text-sm",
-      md: "px-4 py-2 text-sm",
-      lg: "px-6 py-3 text-base",
+      sm: "h-8 px-3 text-xs gap-1",
+      md: "h-9 px-4 text-sm gap-1.5",
+      lg: "h-10 px-5 text-sm gap-2",
     };
+    
     return (
       <button
         ref={ref}
-        className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+        className={`${base} ${variants[variant]} ${variant !== "link" ? sizes[size] : ""} ${className}`}
         {...props}
       />
     );

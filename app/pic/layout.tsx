@@ -1,4 +1,4 @@
-import { AppHeader } from "@/components/layout/AppHeader";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { requireRole } from "@/lib/auth";
 
 export default async function PicLayout({
@@ -8,9 +8,8 @@ export default async function PicLayout({
 }) {
   await requireRole(["admin", "pic"]);
   return (
-    <>
-      <AppHeader />
-      <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
-    </>
+    <AppLayout>
+      <div className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</div>
+    </AppLayout>
   );
 }

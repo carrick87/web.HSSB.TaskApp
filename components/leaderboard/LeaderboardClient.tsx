@@ -63,119 +63,150 @@ export function LeaderboardClient({
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-medium">Period:</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm"
-            >
-              <option value="month">Monthly</option>
-              <option value="year">Yearly</option>
-              <option value="all">All time</option>
-            </select>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="atlassian-label">Period</label>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="atlassian-select w-28"
+              >
+                <option value="month">Monthly</option>
+                <option value="year">Yearly</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
             {period === "month" && (
               <>
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={month}
-                  onChange={(e) => setMonth(parseInt(e.target.value, 10) || 1)}
-                  className="w-14 rounded border px-2 py-1 text-sm"
-                />
+                <div>
+                  <label className="atlassian-label">Month</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={month}
+                    onChange={(e) => setMonth(parseInt(e.target.value, 10) || 1)}
+                    className="atlassian-input w-16"
+                  />
+                </div>
+                <div>
+                  <label className="atlassian-label">Year</label>
+                  <input
+                    type="number"
+                    min={2020}
+                    max={2030}
+                    value={year}
+                    onChange={(e) => setYear(parseInt(e.target.value, 10) || new Date().getFullYear())}
+                    className="atlassian-input w-20"
+                  />
+                </div>
+              </>
+            )}
+            {period === "year" && (
+              <div>
+                <label className="atlassian-label">Year</label>
                 <input
                   type="number"
                   min={2020}
                   max={2030}
                   value={year}
                   onChange={(e) => setYear(parseInt(e.target.value, 10) || new Date().getFullYear())}
-                  className="w-20 rounded border px-2 py-1 text-sm"
+                  className="atlassian-input w-20"
                 />
-              </>
-            )}
-            {period === "year" && (
-              <input
-                type="number"
-                min={2020}
-                max={2030}
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value, 10) || new Date().getFullYear())}
-                className="w-20 rounded border px-2 py-1 text-sm"
-              />
+              </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <select
-              value={branchId}
-              onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
-              className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm"
-            >
-              <option value="">All branches</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <select
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm"
-            >
-              <option value="">All departments</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="atlassian-label">Branch</label>
+              <select
+                value={branchId}
+                onChange={(e) => { setBranchId(e.target.value); setDepartmentId(""); }}
+                className="atlassian-select w-40"
+              >
+                <option value="">All branches</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="atlassian-label">Department</label>
+              <select
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="atlassian-select w-40"
+              >
+                <option value="">All departments</option>
+                {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
             <Button size="sm" onClick={applyFilters} disabled={loading}>
               {loading ? "Loading…" : "Apply"}
             </Button>
             <Button size="sm" variant="secondary" onClick={exportExcel}>
-              Export Excel
+              Export
             </Button>
           </div>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader>
-          <CardTitle>Top performers — {periodLabel}</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Rankings</CardTitle>
+          <span className="text-xs text-neutral-500 font-normal">{periodLabel}</span>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-2 font-medium">Rank</th>
-                  <th className="text-left py-2 font-medium">Name</th>
-                  <th className="text-left py-2 font-medium">Branch</th>
-                  <th className="text-left py-2 font-medium">Department</th>
-                  <th className="text-right py-2 font-medium">Points</th>
-                  <th className="text-right py-2 font-medium">Completed</th>
-                  <th className="text-right py-2 font-medium">Late</th>
-                  <th className="text-right py-2 font-medium">Failed</th>
+                <tr className="border-b border-neutral-200 bg-neutral-50">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Rank</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Name</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden sm:table-cell">Branch</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden md:table-cell">Department</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide">Points</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Done</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Late</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wide hidden lg:table-cell">Failed</th>
                 </tr>
               </thead>
               <tbody>
                 {data.leaderboard?.slice(0, 20).map((row) => (
                   <tr
                     key={row.profile_id}
-                    className={`border-b border-slate-100 dark:border-slate-700 ${
-                      row.rank <= 3 ? "bg-amber-50/50 dark:bg-amber-900/10" : ""
+                    className={`border-b border-neutral-100 ${
+                      row.rank <= 3 ? "bg-atlassian-yellow-light/30" : ""
                     }`}
                   >
-                    <td className="py-2">
-                      {row.rank <= 3 ? MEDALS[row.rank - 1] : row.rank}
+                    <td className="px-4 py-3">
+                      {row.rank <= 3 ? (
+                        <span className="text-lg">{MEDALS[row.rank - 1]}</span>
+                      ) : (
+                        <span className="text-neutral-500">{row.rank}</span>
+                      )}
                     </td>
-                    <td className="py-2 font-medium">{row.name}</td>
-                    <td className="py-2 text-slate-600 dark:text-slate-400">{row.branch}</td>
-                    <td className="py-2 text-slate-600 dark:text-slate-400">{row.department}</td>
-                    <td className="py-2 text-right font-semibold">{row.totalPoints}</td>
-                    <td className="py-2 text-right">{row.completed}</td>
-                    <td className="py-2 text-right">{row.late}</td>
-                    <td className="py-2 text-right">{row.failed}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-semibold">
+                          {row.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-neutral-1000">{row.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-neutral-600 hidden sm:table-cell">{row.branch || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-600 hidden md:table-cell">{row.department || "—"}</td>
+                    <td className="px-4 py-3 text-right font-bold text-brand-700">{row.totalPoints}</td>
+                    <td className="px-4 py-3 text-right text-atlassian-green hidden lg:table-cell">{row.completed}</td>
+                    <td className="px-4 py-3 text-right text-atlassian-yellow hidden lg:table-cell">{row.late}</td>
+                    <td className="px-4 py-3 text-right text-atlassian-red hidden lg:table-cell">{row.failed}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           {(!data.leaderboard?.length) && (
-            <p className="text-slate-500 dark:text-slate-400 py-4">No data for this period.</p>
+            <div className="px-4 py-8 text-center">
+              <p className="text-neutral-500 text-sm">No data for this period.</p>
+            </div>
           )}
         </CardContent>
       </Card>

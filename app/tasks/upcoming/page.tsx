@@ -28,42 +28,50 @@ export default async function UpcomingTasksPage() {
     .limit(50);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-        Upcoming Tasks
-      </h1>
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <h1 className="text-xl font-semibold text-neutral-1000">
+          Upcoming Tasks
+        </h1>
+        <p className="text-sm text-neutral-600 mt-0.5">
+          Tasks scheduled for future dates
+        </p>
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Future assignments</CardTitle>
+          <CardTitle>Future Assignments</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {!tasks?.length ? (
-            <p className="text-slate-500 dark:text-slate-400">
-              No upcoming tasks.
-            </p>
+            <div className="px-4 py-8 text-center">
+              <p className="text-neutral-500 text-sm">
+                No upcoming tasks scheduled.
+              </p>
+            </div>
           ) : (
-            <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+            <div className="divide-y divide-neutral-200">
               {tasks.map((t: { id: string; status: string; assignment_date: string; due_date: string; template: unknown }) => {
                 const title = Array.isArray(t.template) ? (t.template[0] as { title?: string })?.title : (t.template as { title?: string })?.title;
                 return (
-                <li key={t.id} className="py-3 first:pt-0">
-                  <div className="flex items-center justify-between gap-4">
+                  <Link
+                    key={t.id}
+                    href={`/tasks/${t.id}`}
+                    className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-neutral-50 transition-colors"
+                  >
                     <div>
-                      <Link
-                        href={`/tasks/${t.id}`}
-                        className="font-medium text-slate-900 dark:text-slate-100 hover:underline"
-                      >
+                      <p className="font-medium text-neutral-1000 text-sm">
                         {title ?? "Task"}
-                      </Link>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      </p>
+                      <p className="text-xs text-neutral-500 mt-0.5">
                         Due {new Date(t.due_date).toLocaleString()}
                       </p>
                     </div>
                     <StatusBadge status={t.status as "pending" | "accepted" | "submitted" | "verified" | "rejected" | "failed"} />
-                  </div>
-                </li>
-              );})}
-            </ul>
+                  </Link>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

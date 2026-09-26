@@ -1,4 +1,4 @@
-import { AppHeader } from "@/components/layout/AppHeader";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function ProfileLayout({
   children,
@@ -6,9 +6,8 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <AppHeader />
-      <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
-    </>
+    <AppLayout>
+      <div className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</div>
+    </AppLayout>
   );
 }

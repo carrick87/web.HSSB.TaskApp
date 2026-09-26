@@ -7,19 +7,24 @@ export default async function HomePage() {
   if (user) redirect("/dashboard");
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-        TaskApp
-      </h1>
-      <p className="text-slate-600 dark:text-slate-400 mb-8">
-        Harrison Sabah Sdn Bhd — Internal Task Management
-      </p>
-      <Link
-        href="/login"
-        className="rounded-lg bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 font-medium hover:opacity-90"
-      >
-        Log in
-      </Link>
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-neutral-100">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-brand-700 rounded-atlassian mb-6 shadow-atlassian-md">
+          <span className="text-white font-bold text-3xl">HS</span>
+        </div>
+        <h1 className="text-3xl font-semibold text-neutral-1000 mb-2">
+          TaskApp
+        </h1>
+        <p className="text-neutral-600 mb-8 max-w-sm">
+          Internal task management system for Harrison Sabah Sdn Bhd
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex items-center justify-center h-10 px-6 rounded-atlassian bg-brand-700 text-white font-medium hover:bg-brand-800 active:bg-brand-900 transition-colors shadow-atlassian-sm"
+        >
+          Sign in to continue
+        </Link>
+      </div>
     </main>
   );
 }
