@@ -16,13 +16,15 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const inviteToken = searchParams.get("invite") ?? "";
+  const presetEmail = searchParams.get("email") ?? "";
   const [mode, setMode] = useState<Mode>(initialMode);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
 
   const [signupUsername, setSignupUsername] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
+  const [signupEmail, setSignupEmail] = useState(presetEmail);
   const [signupPassword, setSignupPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
           username: signupUsername.trim(),
           ...(signupEmail.trim() && { email: signupEmail.trim().toLowerCase() }),
           password: signupPassword,
+          ...(inviteToken && { inviteToken }),
         }),
       });
       const data = await res.json().catch(() => ({}));

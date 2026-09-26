@@ -18,3 +18,6 @@ CREATE TABLE IF NOT EXISTS public.email_task_threads (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (task_id, recipient_email)
 );
+
+ALTER TABLE public.email_task_threads ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.email_task_threads FROM anon, authenticated;

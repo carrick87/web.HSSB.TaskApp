@@ -100,11 +100,13 @@ BEGIN
 
   IF TG_OP = 'DELETE' THEN
     IF OLD.role = 'owner' AND OLD.status = 'active' THEN
-      SELECT COUNT(*) INTO remaining
-      FROM public.organization_members
-      WHERE org_id = target_org AND role = 'owner' AND status = 'active' AND user_id <> OLD.user_id;
-      IF remaining = 0 THEN
-        RAISE EXCEPTION 'Organization must have at least one active owner.';
+      IF EXISTS (SELECT 1 FROM public.organizations o WHERE o.id = target_org) THEN
+        SELECT COUNT(*) INTO remaining
+        FROM public.organization_members
+        WHERE org_id = target_org AND role = 'owner' AND status = 'active' AND user_id <> OLD.user_id;
+        IF remaining = 0 THEN
+          RAISE EXCEPTION 'Organization must have at least one active owner.';
+        END IF;
       END IF;
     END IF;
     RETURN OLD;
@@ -208,13 +210,22 @@ ALTER TABLE public.organization_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "organizations_select_member" ON public.organizations;
+DROP POLICY IF EXISTS "organizations_select_public_branding" ON public.organizations;
+DROP POLICY IF EXISTS "organizations_insert_authenticated" ON public.organizations;
+DROP POLICY IF EXISTS "organizations_update_admin" ON public.organizations;
+DROP POLICY IF EXISTS "organizations_platform_suspend" ON public.organizations;
+DROP POLICY IF EXISTS "org_members_select_same_org" ON public.organization_members;
+DROP POLICY IF EXISTS "org_members_admin_write" ON public.organization_members;
+DROP POLICY IF EXISTS "org_members_self_read" ON public.organization_members;
+DROP POLICY IF EXISTS "org_invites_admin" ON public.organization_invites;
+DROP POLICY IF EXISTS "org_audit_select_admin" ON public.organization_audit_log;
+DROP POLICY IF EXISTS "org_audit_insert_admin" ON public.organization_audit_log;
+DROP POLICY IF EXISTS "platform_admins_select" ON public.platform_admins;
+
 CREATE POLICY "organizations_select_member"
   ON public.organizations FOR SELECT TO authenticated
   USING (public.is_org_member(id) OR public.is_platform_admin());
-
-CREATE POLICY "organizations_select_public_branding"
-  ON public.organizations FOR SELECT TO anon, authenticated
-  USING (status = 'active');
 
 CREATE POLICY "organizations_insert_authenticated"
   ON public.organizations FOR INSERT TO authenticated
@@ -236,8 +247,20 @@ CREATE POLICY "org_members_select_same_org"
 
 CREATE POLICY "org_members_admin_write"
   ON public.organization_members FOR ALL TO authenticated
-  USING (public.is_org_admin(org_id))
-  WITH CHECK (public.is_org_admin(org_id));
+  USING (
+    public.is_org_admin(org_id)
+    AND (
+      public.org_role(org_id) = 'owner'
+      OR organization_members.role <> 'owner'
+    )
+  )
+  WITH CHECK (
+    public.is_org_admin(org_id)
+    AND (
+      public.org_role(org_id) = 'owner'
+      OR role <> 'owner'
+    )
+  );
 
 CREATE POLICY "org_members_self_read"
   ON public.organization_members FOR SELECT TO authenticated

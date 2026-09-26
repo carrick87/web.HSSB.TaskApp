@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { ORG_ROLES, legacyProfileRoleToOrgRole } from "@/lib/org/roles";
+import { ORG_ROLES } from "@/lib/org/roles";
 
 type Ctx = { orgId: string; userId: string; role: string };
 
@@ -13,7 +13,7 @@ export async function getOrgApiContext(requireAdmin = false): Promise<Ctx | Next
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("current_org_id, role, status")
+    .select("current_org_id, status")
     .eq("id", user.id)
     .single();
 
@@ -25,27 +25,23 @@ export async function getOrgApiContext(requireAdmin = false): Promise<Ctx | Next
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let orgId = profile.current_org_id as string | null;
-  let role: string | undefined;
-
-  if (orgId) {
-    const { data: membership } = await supabase
-      .from("organization_members")
-      .select("role, status")
-      .eq("org_id", orgId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (membership?.status === "active") {
-      role = membership.role as string;
-    }
+  const orgId = profile.current_org_id as string | null;
+  if (!orgId) {
+    return NextResponse.json({ error: "No active workspace" }, { status: 403 });
   }
 
-  // Pre-migration / legacy: no org tables or membership yet
-  if (!orgId || !role) {
-    role = legacyProfileRoleToOrgRole(profile.role as string);
-    orgId = orgId ?? "legacy";
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("role, status")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membership?.status !== "active" || !membership.role) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const role = membership.role as string;
 
   if (requireAdmin && role !== ORG_ROLES.OWNER && role !== ORG_ROLES.ADMIN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

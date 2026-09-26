@@ -32,7 +32,7 @@ export default async function InviteAcceptPage({ params }: { params: Promise<{ t
 
   const orgName =
     (invite.organizations as { name?: string; short_name?: string | null } | null)?.name ?? "Workspace";
-  const signupHref = `/signup?email=${encodeURIComponent(invite.email)}&invite=${encodeURIComponent(token)}`;
+  const signupHref = `/login?mode=signup&email=${encodeURIComponent(invite.email)}&invite=${encodeURIComponent(token)}`;
   const loginHref = `/login?email=${encodeURIComponent(invite.email)}&invite=${encodeURIComponent(token)}`;
 
   return (

@@ -43,14 +43,18 @@ CREATE TABLE IF NOT EXISTS public.push_device_tokens (
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_device_tokens ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "notifications_select_own" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_update_own" ON public.notifications;
+DROP POLICY IF EXISTS "push_tokens_own" ON public.push_device_tokens;
+
 CREATE POLICY notifications_select_own ON public.notifications
   FOR SELECT USING (
     user_id = auth.uid()
-    AND task_app.is_org_member(org_id)
+    AND public.is_org_member(org_id)
   );
 
 CREATE POLICY notifications_update_own ON public.notifications
-  FOR UPDATE USING (user_id = auth.uid() AND task_app.is_org_member(org_id));
+  FOR UPDATE USING (user_id = auth.uid() AND public.is_org_member(org_id));
 
 CREATE POLICY push_tokens_own ON public.push_device_tokens
   FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());

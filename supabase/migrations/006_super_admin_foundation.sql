@@ -11,13 +11,10 @@ ALTER TABLE public.profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS last_sign_in_at TIMESTAMPTZ;
 
-UPDATE public.profiles SET role = 'super_admin' WHERE role = 'admin';
-UPDATE public.profiles SET role = 'manager' WHERE role = 'pic';
-UPDATE public.profiles SET role = 'user' WHERE role = 'staff';
-
+-- Drop legacy role check before any new values; role renames run in 011 after deploy window.
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check
-  CHECK (role IN ('super_admin', 'manager', 'user'));
+  CHECK (role IN ('admin', 'pic', 'staff', 'super_admin', 'manager', 'user'));
 
 CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles(status);
 
@@ -54,7 +51,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.user_is_active() AND public.user_role() = 'super_admin'
+  SELECT public.user_is_active() AND public.user_role() IN ('admin', 'super_admin')
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_manager()
@@ -64,7 +61,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.user_is_active() AND public.user_role() = 'manager'
+  SELECT public.user_is_active() AND public.user_role() IN ('pic', 'manager')
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_elevated()
@@ -74,7 +71,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.user_is_active() AND public.user_role() IN ('super_admin', 'manager')
+  SELECT public.user_is_active() AND public.user_role() IN ('admin', 'super_admin', 'pic', 'manager')
 $$;
 
 -- =============================================================================
@@ -99,6 +96,10 @@ VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 'TaskApp', 'TaskApp')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.company_profile ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "company_profile_select_all" ON public.company_profile;
+DROP POLICY IF EXISTS "company_profile_update_super_admin" ON public.company_profile;
+DROP POLICY IF EXISTS "company_profile_insert_super_admin" ON public.company_profile;
 
 CREATE POLICY "company_profile_select_all"
   ON public.company_profile FOR SELECT
@@ -132,6 +133,9 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_log (
 CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created ON public.admin_audit_log(created_at DESC);
 
 ALTER TABLE public.admin_audit_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "admin_audit_log_select_super_admin" ON public.admin_audit_log;
+DROP POLICY IF EXISTS "admin_audit_log_insert_super_admin" ON public.admin_audit_log;
 
 CREATE POLICY "admin_audit_log_select_super_admin"
   ON public.admin_audit_log FOR SELECT
@@ -319,9 +323,9 @@ BEGIN
     IF t.assign_to_type = 'user' AND t.assign_to_id IS NOT NULL THEN
       assignee_ids := array_append(assignee_ids, t.assign_to_id);
     ELSIF t.assign_to_type = 'branch' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE branch_id = t.assign_to_id AND role = 'user' AND status = 'active';
+      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE branch_id = t.assign_to_id AND role IN ('user', 'staff') AND status = 'active';
     ELSIF t.assign_to_type = 'department' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE department_id = t.assign_to_id AND role = 'user' AND status = 'active';
+      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE department_id = t.assign_to_id AND role IN ('user', 'staff') AND status = 'active';
     END IF;
 
     IF assignee_ids IS NULL THEN assignee_ids := ARRAY[]::UUID[]; END IF;

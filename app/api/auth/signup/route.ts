@@ -9,6 +9,12 @@ export async function POST(request: Request) {
     const username = typeof body.username === "string" ? body.username.trim() : "";
     const emailRaw = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
+    const inviteToken =
+      typeof body.inviteToken === "string"
+        ? body.inviteToken.trim()
+        : typeof body.invite === "string"
+          ? body.invite.trim()
+          : "";
 
     if (!username || username.length < 2) {
       return NextResponse.json(
@@ -49,35 +55,57 @@ export async function POST(request: Request) {
     let needsOnboarding = true;
     let currentOrgId: string | null = null;
 
-    if (emailRaw) {
-      try {
-        const { data: invite } = await admin
-          .from("organization_invites")
-          .select("org_id, role, invited_by")
-          .eq("email", emailRaw)
-          .eq("status", "pending")
-          .maybeSingle();
-        if (invite) {
-          needsOnboarding = false;
-          currentOrgId = invite.org_id;
-          await admin.from("organization_members").insert({
-            org_id: invite.org_id,
-            user_id: authUser.user.id,
-            role: invite.role ?? ORG_ROLES.MEMBER,
-            status: "active",
-          });
-          await admin.from("organization_invites").update({ status: "accepted" }).eq("email", emailRaw);
-          if (invite.invited_by) {
-            const { notifyInviteAccepted } = await import("@/lib/email/membership-events");
-            await notifyInviteAccepted({
-              orgId: invite.org_id,
-              inviterUserId: invite.invited_by,
-              inviteeUserId: authUser.user.id,
-            });
-          }
-        }
-      } catch {
-        /* invites table not migrated yet */
+    if (inviteToken) {
+      const { data: invite, error: inviteError } = await admin
+        .from("organization_invites")
+        .select("id, org_id, role, invited_by, email, status, expires_at")
+        .eq("token", inviteToken)
+        .maybeSingle();
+
+      if (inviteError || !invite || invite.status !== "pending") {
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: "Invalid or expired invitation." }, { status: 400 });
+      }
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: "Invitation has expired." }, { status: 400 });
+      }
+      if (emailRaw && invite.email.toLowerCase() !== emailRaw) {
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: "Email does not match this invitation." }, { status: 400 });
+      }
+
+      needsOnboarding = false;
+      currentOrgId = invite.org_id;
+
+      const { error: memberError } = await admin.from("organization_members").insert({
+        org_id: invite.org_id,
+        user_id: authUser.user.id,
+        role: invite.role ?? ORG_ROLES.MEMBER,
+        status: "active",
+      });
+      if (memberError) {
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: memberError.message }, { status: 500 });
+      }
+
+      const { error: usedError } = await admin
+        .from("organization_invites")
+        .update({ status: "accepted" })
+        .eq("id", invite.id)
+        .eq("status", "pending");
+      if (usedError) {
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: usedError.message }, { status: 500 });
+      }
+
+      if (invite.invited_by) {
+        const { notifyInviteAccepted } = await import("@/lib/email/membership-events");
+        await notifyInviteAccepted({
+          orgId: invite.org_id,
+          inviterUserId: invite.invited_by,
+          inviteeUserId: authUser.user.id,
+        });
       }
     }
 
@@ -85,14 +113,15 @@ export async function POST(request: Request) {
       id: authUser.user.id,
       username,
       auth_email,
-      harrison_email: emailRaw || null,
-      role: "user",
+      harrison_email: null,
+      role: "staff",
       branch_id: null,
       department_id: null,
       current_org_id: currentOrgId,
     });
 
     if (profileError) {
+      await admin.auth.admin.deleteUser(authUser.user.id);
       if (profileError.code === "23505") {
         return NextResponse.json({ error: "This username is already taken." }, { status: 400 });
       }

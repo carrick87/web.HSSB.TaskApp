@@ -8,19 +8,34 @@ export type UnsubscribePayload = {
   exp: number;
 };
 
+function getSigningSecret(): string | null {
+  const secret = getEmailConfig().signingSecret?.trim();
+  return secret || null;
+}
+
 export function signUnsubscribeToken(payload: UnsubscribePayload): string {
-  const { signingSecret } = getEmailConfig();
+  const signingSecret = getSigningSecret();
+  if (!signingSecret) {
+    throw new Error("EMAIL_UNSUBSCRIBE_SECRET is not configured");
+  }
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const sig = crypto.createHmac("sha256", signingSecret).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
 
 export function verifyUnsubscribeToken(token: string): UnsubscribePayload | null {
-  const { signingSecret } = getEmailConfig();
+  const signingSecret = getSigningSecret();
+  if (!signingSecret) return null;
+
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
+
   const expected = crypto.createHmac("sha256", signingSecret).update(body).digest("base64url");
-  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expected);
+  if (sigBuf.length !== expectedBuf.length) return null;
+  if (!crypto.timingSafeEqual(sigBuf, expectedBuf)) return null;
+
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as UnsubscribePayload;
     if (payload.exp < Date.now()) return null;

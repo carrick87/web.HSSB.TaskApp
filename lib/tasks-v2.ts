@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 import type { Task, TaskAttachment, TaskComment } from "@/types/database.types";
 
 export async function getTasks(filters?: {
@@ -98,6 +99,8 @@ export async function createTask(data: {
   assignee_id: string;
 }): Promise<{ task: Task | null; error: string | null }> {
   const supabase = await createClient();
+  const orgId = await getActiveOrgIdForUser(supabase, data.created_by);
+  if (!orgId) return { task: null, error: "No active workspace" };
   
   const { data: task, error } = await supabase
     .from("tasks")
@@ -111,6 +114,7 @@ export async function createTask(data: {
       project_id: data.project_id || null,
       created_by: data.created_by,
       assignee_id: data.assignee_id,
+      org_id: orgId,
     })
     .select(`
       *,

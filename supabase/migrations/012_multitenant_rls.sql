@@ -1,9 +1,57 @@
 -- 012: Tenant RLS — scope reads/writes by org_id + membership helpers.
 -- Drops legacy policies that used user_role() / global admin.
 
+-- Drop legacy policies from 001–007 (production names)
+DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
+DROP POLICY IF EXISTS "task_templates_select" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_insert" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_update" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_delete" ON public.task_templates;
+DROP POLICY IF EXISTS "task_template_questions_select" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_insert" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_update" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_delete" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_instances_select_staff" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_select_pic" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_select_admin" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_insert" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_staff" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_pic" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_admin" ON public.task_instances;
+DROP POLICY IF EXISTS "point_settings_select" ON public.point_settings;
+DROP POLICY IF EXISTS "point_settings_admin" ON public.point_settings;
+DROP POLICY IF EXISTS "user_points_select" ON public.user_points;
+DROP POLICY IF EXISTS "branches_insert_admin" ON public.branches;
+DROP POLICY IF EXISTS "branches_update_admin" ON public.branches;
+DROP POLICY IF EXISTS "branches_delete_admin" ON public.branches;
+DROP POLICY IF EXISTS "departments_insert_admin" ON public.departments;
+DROP POLICY IF EXISTS "departments_update_admin" ON public.departments;
+DROP POLICY IF EXISTS "departments_delete_admin" ON public.departments;
+DROP POLICY IF EXISTS "projects_admin_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_manager_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_member_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_insert" ON public.projects;
+DROP POLICY IF EXISTS "projects_update" ON public.projects;
+DROP POLICY IF EXISTS "projects_delete" ON public.projects;
+DROP POLICY IF EXISTS "project_members_select" ON public.project_members;
+DROP POLICY IF EXISTS "project_members_insert" ON public.project_members;
+DROP POLICY IF EXISTS "project_members_delete" ON public.project_members;
+DROP POLICY IF EXISTS "tasks_select" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_update" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
+DROP POLICY IF EXISTS "task_attachments_select" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_insert" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_delete" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_comments_select" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_insert" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_update" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_delete" ON public.task_comments;
+
 -- branches
-DROP POLICY IF EXISTS "branches_select" ON public.branches;
-DROP POLICY IF EXISTS "branches_admin_all" ON public.branches;
+DROP POLICY IF EXISTS "branches_org_member_select" ON public.branches;
+DROP POLICY IF EXISTS "branches_org_admin_write" ON public.branches;
 CREATE POLICY "branches_org_member_select" ON public.branches FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
 CREATE POLICY "branches_org_admin_write" ON public.branches FOR ALL TO authenticated
@@ -11,6 +59,8 @@ CREATE POLICY "branches_org_admin_write" ON public.branches FOR ALL TO authentic
   WITH CHECK (public.is_org_admin(org_id));
 
 -- departments
+DROP POLICY IF EXISTS "departments_org_member_select" ON public.departments;
+DROP POLICY IF EXISTS "departments_org_admin_write" ON public.departments;
 DROP POLICY IF EXISTS "departments_select" ON public.departments;
 DROP POLICY IF EXISTS "departments_admin_all" ON public.departments;
 CREATE POLICY "departments_org_member_select" ON public.departments FOR SELECT TO authenticated
@@ -22,6 +72,8 @@ CREATE POLICY "departments_org_admin_write" ON public.departments FOR ALL TO aut
 -- task_templates
 DROP POLICY IF EXISTS "templates_select" ON public.task_templates;
 DROP POLICY IF EXISTS "templates_admin_all" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_org_select" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_org_manager_write" ON public.task_templates;
 CREATE POLICY "task_templates_org_select" ON public.task_templates FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
 CREATE POLICY "task_templates_org_manager_write" ON public.task_templates FOR ALL TO authenticated
@@ -31,11 +83,28 @@ CREATE POLICY "task_templates_org_manager_write" ON public.task_templates FOR AL
 -- task_instances
 DROP POLICY IF EXISTS "instances_select" ON public.task_instances;
 DROP POLICY IF EXISTS "instances_admin_all" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_org_select" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_org_write" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_org_update" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_org_delete" ON public.task_instances;
 CREATE POLICY "task_instances_org_select" ON public.task_instances FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
-CREATE POLICY "task_instances_org_write" ON public.task_instances FOR ALL TO authenticated
-  USING (public.is_org_member(org_id))
+
+CREATE POLICY "task_instances_org_update" ON public.task_instances FOR UPDATE TO authenticated
+  USING (
+    public.is_org_member(org_id)
+    AND (
+      assignee_profile_id = auth.uid()
+      OR public.is_org_manager_or_above(org_id)
+    )
+  )
   WITH CHECK (public.is_org_member(org_id));
+
+CREATE POLICY "task_instances_org_insert" ON public.task_instances FOR INSERT TO authenticated
+  WITH CHECK (public.is_org_manager_or_above(org_id));
+
+CREATE POLICY "task_instances_org_delete" ON public.task_instances FOR DELETE TO authenticated
+  USING (public.is_org_manager_or_above(org_id));
 
 -- projects / tasks (005)
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
@@ -43,10 +112,8 @@ ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "projects_select" ON public.projects;
-DROP POLICY IF EXISTS "projects_insert" ON public.projects;
-DROP POLICY IF EXISTS "projects_update" ON public.projects;
-DROP POLICY IF EXISTS "projects_delete" ON public.projects;
+DROP POLICY IF EXISTS "projects_org_member_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_org_manager_write" ON public.projects;
 
 CREATE POLICY "projects_org_member_select" ON public.projects FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
@@ -61,12 +128,35 @@ DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
 
 CREATE POLICY "tasks_org_member_select" ON public.tasks FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
-CREATE POLICY "tasks_org_member_write" ON public.tasks FOR ALL TO authenticated
-  USING (public.is_org_member(org_id))
+
+CREATE POLICY "tasks_org_member_insert" ON public.tasks FOR INSERT TO authenticated
+  WITH CHECK (
+    public.is_org_member(org_id)
+    AND (created_by = auth.uid() OR public.is_org_manager_or_above(org_id))
+  );
+
+CREATE POLICY "tasks_org_member_update" ON public.tasks FOR UPDATE TO authenticated
+  USING (
+    public.is_org_member(org_id)
+    AND (
+      created_by = auth.uid()
+      OR assignee_id = auth.uid()
+      OR public.is_org_manager_or_above(org_id)
+    )
+  )
   WITH CHECK (public.is_org_member(org_id));
 
--- Attachments/comments inherit org via task join in app; add org_id denormalized optional later
--- For now restrict via task_id subquery
+CREATE POLICY "tasks_org_manager_delete" ON public.tasks FOR DELETE TO authenticated
+  USING (public.is_org_manager_or_above(org_id));
+
+DROP POLICY IF EXISTS "task_attachments_org" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_comments_org" ON public.task_comments;
+DROP POLICY IF EXISTS "point_settings_org" ON public.point_settings;
+DROP POLICY IF EXISTS "user_points_org_select" ON public.user_points;
+DROP POLICY IF EXISTS "user_points_org_insert" ON public.user_points;
+DROP POLICY IF EXISTS "profiles_self_update" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_org_peers" ON public.profiles;
+
 CREATE POLICY "task_attachments_org" ON public.task_attachments FOR ALL TO authenticated
   USING (
     EXISTS (
@@ -102,9 +192,6 @@ CREATE POLICY "point_settings_org" ON public.point_settings FOR ALL TO authentic
 
 CREATE POLICY "user_points_org_select" ON public.user_points FOR SELECT TO authenticated
   USING (public.is_org_member(org_id));
-
-CREATE POLICY "user_points_org_insert" ON public.user_points FOR INSERT TO authenticated
-  WITH CHECK (public.is_org_member(org_id));
 
 -- profiles: users read self; org members see co-members in same org
 DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;

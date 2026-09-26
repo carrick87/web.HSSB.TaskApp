@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { EMAIL_TEMPLATES } from "@/lib/email/templates-keys";
 import { renderEmailTemplate } from "@/lib/email/render-template";
 import { getEmailConfig } from "@/lib/email/config";
@@ -107,13 +108,24 @@ const samples: { key: string; label: string; template: string; payload: Record<s
   },
 ];
 
-export default async function EmailPreviewPage() {
-  if (process.env.NODE_ENV === "production" && !process.env.EMAIL_PREVIEW_SECRET) {
-    return <p className="p-8">Not available.</p>;
+export default async function EmailPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ secret?: string }>;
+}) {
+  const params = await searchParams;
+  const { previewSecret } = getEmailConfig();
+  if (!previewSecret || params.secret !== previewSecret) {
+    notFound();
   }
 
   const config = getEmailConfig();
-  const unsub = buildUnsubscribeUrl("preview-user", branding.orgId, "task_activity");
+  let unsub = `${config.appUrl}/api/email/unsubscribe?token=preview`;
+  try {
+    unsub = buildUnsubscribeUrl("preview-user", branding.orgId, "task_activity");
+  } catch {
+    /* preview without EMAIL_UNSUBSCRIBE_SECRET */
+  }
 
   const rendered = await Promise.all(
     samples.map(async (s) => ({

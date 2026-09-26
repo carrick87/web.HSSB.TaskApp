@@ -10,8 +10,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const scope = new URL(request.url).searchParams.get("scope") ?? "full";
+
+  if (scope === "scheduled") {
+    const scheduled = await runReminderAndDigestJobs();
+    return NextResponse.json({ ok: true, scheduled });
+  }
+
+  if (scope === "outbox") {
+    const outbox = await processEmailOutbox();
+    return NextResponse.json({ ok: true, outbox });
+  }
+
   const outbox = await processEmailOutbox();
   const scheduled = await runReminderAndDigestJobs();
-
   return NextResponse.json({ ok: true, outbox, scheduled });
 }

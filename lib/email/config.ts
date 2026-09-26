@@ -7,7 +7,8 @@ export function getEmailConfig() {
     appUrl: (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
     cronSecret: process.env.CRON_SECRET ?? "",
     webhookSecret: process.env.RESEND_WEBHOOK_SECRET ?? "",
-    signingSecret: process.env.EMAIL_UNSUBSCRIBE_SECRET ?? process.env.CRON_SECRET ?? "dev-unsubscribe-secret",
+    signingSecret: process.env.EMAIL_UNSUBSCRIBE_SECRET ?? "",
+    previewSecret: process.env.EMAIL_PREVIEW_SECRET ?? "",
   };
 }
 

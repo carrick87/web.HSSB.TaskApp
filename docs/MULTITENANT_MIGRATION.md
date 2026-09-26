@@ -1,16 +1,45 @@
 # Multi-tenant migration (HSSB live data)
 
-Apply **after** `001`–`005` (skip single-tenant `006`–`009` on new multi-tenant deployments).
+Run **all** SQL migrations in filename order on production (`001` through the latest). Migrations `006`–`009` are required (roles, audit, branding storage); do not skip them.
+
+## Rollout sequence (production)
+
+1. **Migrate database** — apply `001`…`017` in order (≈5–15 minutes depending on `task_instances` volume).
+2. **Deploy application** immediately after migration completes.
+
+During the short window between steps 1 and 2, the database keeps legacy role values (`admin` / `pic` / `staff`) until `011` renames them; `006` only widens the role check constraint and does **not** rename early. After `011`, profile roles are `super_admin` / `manager` / `user`.
+
+Signup continues to insert `staff` until deploy; `011` maps staff → `user`.
 
 ## Order
 
-1. `010_multitenant_organizations.sql` — orgs, members, invites, platform admins, audit log, helpers
-2. `011_multitenant_org_id_hssb_backfill.sql` — `org_id` columns + HSSB org + memberships
-3. `012_multitenant_rls.sql` — org-scoped RLS
-4. `013_multitenant_storage.sql` — storage policies with `org_id/` prefix
-5. `014_product_notifications_grouping.sql` — grouping labels, notifications, push token table
-6. `015_email_notifications.sql` — email outbox, preferences, task watchers, unified notification events (see `docs/EMAIL_NOTIFICATIONS.md`)
-7. `016_email_design_preferences.sql` — date format, pause-all, in-app matrix columns, task email thread registry
+1. `001`–`005` — core schema, storage, username auth, admin RLS, projects/tasks
+2. `006`–`009` — roles/status, super-admin RLS, company branding bucket, password flag
+3. `010_multitenant_organizations.sql` — orgs, members, invites, platform admins, audit log, helpers
+4. `011_multitenant_org_id_hssb_backfill.sql` — `org_id` columns, HSSB org, memberships, role rename, production bootstrap
+5. `012_multitenant_rls.sql` — org-scoped RLS, legacy policy drops
+6. `013_multitenant_storage.sql` — storage policies (`org_id/` and legacy `task_id/` paths)
+7. `014_product_notifications_grouping.sql`
+8. `015_email_notifications.sql` — see `docs/EMAIL_NOTIFICATIONS.md`
+9. `016_email_design_preferences.sql`
+10. `017_production_hardening.sql` — privilege guards, org_id triggers, policy audit
+
+## Email cron split
+
+- **Vercel** (Hobby-safe): daily `0 1 * * *` → `/api/cron/email?scope=scheduled` (reminders + digests).
+- **Supabase pg_cron + pg_net**: every 5 minutes → `/api/cron/email?scope=outbox` with `CRON_SECRET` from Vault. See `docs/EMAIL_OUTBOX_CRON.md`.
+
+## Platform admin bootstrap
+
+Migration `011` idempotently sets the production `admin` user (username `admin`, id prefix `78925121…`, or `carrick@harrisons.com.my`) as **HSSB owner** and inserts `platform_admins`. Demo accounts remain **members**, never owner.
+
+## Cross-org RLS tests
+
+See `supabase/tests/MULTITENANT_RLS.md` and `supabase/tests/cross_org_isolation.test.sql`.
+
+## Pre-check / post-check
+
+See sections below (unchanged queries).
 
 ## Product branding
 
@@ -84,15 +113,3 @@ GROUP BY role;
 3. `profiles.role` mapped: admin/super_admin → **owner**, pic/manager → **manager**, staff/user → **member**.
 4. `profiles.current_org_id` set to HSSB for all users.
 5. Legacy `company_profile` dropped if present; branding moves to `organizations` row.
-
-## Platform admin (Carrick)
-
-```sql
-UPDATE profiles SET is_platform_admin = true WHERE username = 'demo_admin';
-INSERT INTO platform_admins (user_id) SELECT id FROM profiles WHERE username = 'demo_admin'
-ON CONFLICT DO NOTHING;
-```
-
-## Cross-org RLS tests
-
-See `supabase/tests/MULTITENANT_RLS.md`.

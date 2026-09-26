@@ -29,7 +29,7 @@ async function getRecipientEmail(admin: ReturnType<typeof createAdminClient>, us
     .eq("id", userId)
     .single();
   if (!data || data.email_suppressed) return null;
-  return (data.harrison_email ?? data.auth_email) as string;
+  return (data.auth_email ?? null) as string | null;
 }
 
 async function shouldSendCategory(

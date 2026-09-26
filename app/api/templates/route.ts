@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTasksForToday } from "@/lib/tasks";
+import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "At least one question is required" }, { status: 400 });
   }
 
+  const orgId = await getActiveOrgIdForUser(supabase, user.id);
+  if (!orgId) return NextResponse.json({ error: "No active workspace" }, { status: 403 });
+
   const { data: template, error: templateError } = await supabase
     .from("task_templates")
     .insert({
@@ -53,6 +57,7 @@ export async function POST(request: Request) {
       assign_to_type: assign_to_type ?? "user",
       assign_to_id: assign_to_id || null,
       created_by_profile_id: created_by_profile_id || user.id,
+      org_id: orgId,
     })
     .select("id")
     .single();

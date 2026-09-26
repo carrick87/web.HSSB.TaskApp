@@ -90,18 +90,29 @@ ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_watchers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_outbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_send_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_reminder_state ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.email_outbox FROM anon, authenticated;
+REVOKE ALL ON public.email_send_log FROM anon, authenticated;
+REVOKE ALL ON public.email_reminder_state FROM anon, authenticated;
+
+DROP POLICY IF EXISTS notification_events_select_own ON public.notification_events;
+DROP POLICY IF EXISTS email_preferences_own ON public.email_preferences;
+DROP POLICY IF EXISTS task_watchers_select ON public.task_watchers;
+DROP POLICY IF EXISTS task_watchers_mutate ON public.task_watchers;
 
 CREATE POLICY notification_events_select_own ON public.notification_events
-  FOR SELECT USING (user_id = auth.uid() AND task_app.is_org_member(org_id));
+  FOR SELECT USING (user_id = auth.uid() AND public.is_org_member(org_id));
 
 CREATE POLICY email_preferences_own ON public.email_preferences
   FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY task_watchers_select ON public.task_watchers
-  FOR SELECT USING (user_id = auth.uid() AND task_app.is_org_member(org_id));
+  FOR SELECT USING (user_id = auth.uid() AND public.is_org_member(org_id));
 
 CREATE POLICY task_watchers_mutate ON public.task_watchers
-  FOR ALL USING (user_id = auth.uid() AND task_app.is_org_member(org_id))
-  WITH CHECK (user_id = auth.uid() AND task_app.is_org_member(org_id));
+  FOR ALL USING (user_id = auth.uid() AND public.is_org_member(org_id))
+  WITH CHECK (user_id = auth.uid() AND public.is_org_member(org_id));
 
 -- Outbox: no policies for authenticated users (service role only)

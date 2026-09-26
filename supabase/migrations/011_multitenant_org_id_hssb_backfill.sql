@@ -113,3 +113,46 @@ ALTER TABLE public.point_settings DROP CONSTRAINT IF EXISTS point_settings_event
 CREATE UNIQUE INDEX IF NOT EXISTS idx_point_settings_org_event ON public.point_settings(org_id, event_type);
 
 DROP FUNCTION IF EXISTS task_app._add_org_id(regclass);
+
+-- Finalize legacy profile roles for new app (safe after org memberships exist).
+UPDATE public.profiles SET role = 'super_admin' WHERE role = 'admin';
+UPDATE public.profiles SET role = 'manager' WHERE role = 'pic';
+UPDATE public.profiles SET role = 'user' WHERE role = 'staff';
+
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check
+  CHECK (role IN ('super_admin', 'manager', 'user'));
+
+-- Production bootstrap: Carrick admin is HSSB owner + platform admin; demo users are members only.
+DO $$
+DECLARE
+  v_hssb_id UUID;
+  v_admin_id UUID;
+BEGIN
+  SELECT id INTO v_hssb_id FROM public.organizations WHERE slug = 'hssb' LIMIT 1;
+  SELECT id INTO v_admin_id FROM public.profiles
+  WHERE username = 'admin'
+     OR auth_email ILIKE 'carrick@harrisons.com.my'
+     OR id::text LIKE '78925121%'
+  ORDER BY CASE WHEN username = 'admin' THEN 0 ELSE 1 END
+  LIMIT 1;
+
+  IF v_hssb_id IS NOT NULL AND v_admin_id IS NOT NULL THEN
+    INSERT INTO public.organization_members (org_id, user_id, role, status)
+    VALUES (v_hssb_id, v_admin_id, 'owner', 'active')
+    ON CONFLICT (org_id, user_id) DO UPDATE SET role = 'owner', status = 'active';
+
+    UPDATE public.profiles SET current_org_id = v_hssb_id WHERE id = v_admin_id;
+
+    INSERT INTO public.platform_admins (user_id) VALUES (v_admin_id)
+    ON CONFLICT (user_id) DO NOTHING;
+
+    UPDATE public.organization_members om
+    SET role = 'member'
+    FROM public.profiles p
+    WHERE om.org_id = v_hssb_id
+      AND om.user_id = p.id
+      AND p.username IN ('demo_admin', 'demo_manager', 'demo_member1', 'demo_member2')
+      AND om.user_id <> v_admin_id;
+  END IF;
+END $$;
