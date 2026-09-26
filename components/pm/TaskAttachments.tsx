@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/Button";
 import type { Task } from "@/types/database.types";
 
 interface TaskAttachmentsProps {
-  task: Task;
+  task: Task & { org_id?: string | null };
+  orgId: string;
   canUpload: boolean;
 }
 
-export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
+export function TaskAttachments({ task, orgId, canUpload }: TaskAttachmentsProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -24,7 +25,7 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
     setError(null);
 
     try {
-      const filePath = `${task.id}/${Date.now()}_${file.name}`;
+      const filePath = `${orgId}/${task.id}/${Date.now()}_${file.name}`;
       
       const { error: uploadError } = await supabase.storage
         .from("task-attachments")
@@ -162,29 +163,44 @@ export function TaskAttachments({ task, canUpload }: TaskAttachmentsProps) {
         )}
 
         {canUpload && (
-          <div>
-            <label className="block">
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer">
               <input
                 type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={handleUpload}
                 disabled={uploading}
                 className="hidden"
+              />
+              <span className="inline-flex items-center justify-center rounded-atlassian border px-3 text-sm min-h-[44px]" style={{ borderColor: "var(--neutral-border)" }}>
+                Take photo
+              </span>
+            </label>
+            <label className="inline-flex">
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx"
+                onChange={handleUpload}
+                disabled={uploading}
+                className="hidden"
+                data-attachment-input="file"
               />
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
                 disabled={uploading}
+                className="min-h-[44px]"
                 onClick={() => {
-                  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-                  input?.click();
+                  document.querySelector<HTMLInputElement>('input[data-attachment-input="file"]')?.click();
                 }}
               >
-                {uploading ? "Uploading..." : "Upload File"}
+                {uploading ? "Uploading..." : "Upload file"}
               </Button>
             </label>
-            <p className="text-xs text-neutral-700 mt-2">
-              Max file size: 10MB
+            <p className="text-xs w-full" style={{ color: "var(--text-secondary)" }}>
+              Files are stored in your workspace. Max 10MB.
             </p>
           </div>
         )}

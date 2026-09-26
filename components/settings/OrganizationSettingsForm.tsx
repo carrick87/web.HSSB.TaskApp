@@ -31,6 +31,10 @@ export function OrganizationSettingsForm({ initialOrganization, orgId }: Props) 
       phone: initialOrganization.phone ?? "",
       email: initialOrganization.email ?? "",
       website: initialOrganization.website ?? "",
+      group_tier1_label: initialOrganization.group_tier1_label ?? "Team",
+      group_tier2_label: initialOrganization.group_tier2_label ?? "Sub-team",
+      hide_group_tier1: String(initialOrganization.hide_group_tier1 ?? false),
+      hide_group_tier2: String(initialOrganization.hide_group_tier2 ?? true),
     }),
     [initialOrganization]
   );
@@ -86,7 +90,11 @@ export function OrganizationSettingsForm({ initialOrganization, orgId }: Props) 
     const res = await fetch("/api/settings/organization", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        hide_group_tier1: form.hide_group_tier1 === "true",
+        hide_group_tier2: form.hide_group_tier2 === "true",
+      }),
     });
     const data = await res.json().catch(() => ({}));
     setSaving(false);
@@ -284,6 +292,55 @@ export function OrganizationSettingsForm({ initialOrganization, orgId }: Props) 
           <div>
             <label className="atlassian-label" htmlFor="address">Address</label>
             <textarea id="address" className="atlassian-textarea" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Team groupings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <p style={{ color: "var(--text-secondary)" }}>
+            Rename or hide optional groupings used when assigning members and tasks. New workspaces default to a single &quot;Team&quot; level.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="atlassian-label" htmlFor="tier1-label">Primary label</label>
+              <input
+                id="tier1-label"
+                className="atlassian-input"
+                value={form.group_tier1_label}
+                onChange={(e) => setForm({ ...form, group_tier1_label: e.target.value })}
+                disabled={form.hide_group_tier1 === "true"}
+              />
+              <label className="flex items-center gap-2 mt-2 min-h-[44px]">
+                <input
+                  type="checkbox"
+                  checked={form.hide_group_tier1 === "true"}
+                  onChange={(e) => setForm({ ...form, hide_group_tier1: e.target.checked ? "true" : "false" })}
+                />
+                Hide primary grouping
+              </label>
+            </div>
+            <div>
+              <label className="atlassian-label" htmlFor="tier2-label">Secondary label</label>
+              <input
+                id="tier2-label"
+                className="atlassian-input"
+                value={form.group_tier2_label}
+                onChange={(e) => setForm({ ...form, group_tier2_label: e.target.value })}
+                disabled={form.hide_group_tier2 === "true"}
+              />
+              <label className="flex items-center gap-2 mt-2 min-h-[44px]">
+                <input
+                  type="checkbox"
+                  checked={form.hide_group_tier2 === "true"}
+                  onChange={(e) => setForm({ ...form, hide_group_tier2: e.target.checked ? "true" : "false" })}
+                />
+                Hide secondary grouping
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>

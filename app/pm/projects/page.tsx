@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { getProjects } from "@/lib/projects";
 import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ProjectsPage() {
   await requireRole(["super_admin", "manager"]);
@@ -25,18 +26,12 @@ export default async function ProjectsPage() {
       </div>
 
       {projects.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <div className="w-12 h-12 bg-neutral-100 rounded-atlassian flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            </div>
-            <p className="text-neutral-700 text-sm">
-              No projects yet. Create one to get started.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title="No projects yet"
+          description="Projects group related tasks for your team. Create one when you are ready — no branch setup required."
+          actionLabel="Create project"
+          actionHref="/pm/projects/new"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (

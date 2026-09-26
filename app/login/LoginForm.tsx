@@ -92,7 +92,7 @@ export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: Com
         setLoading(false);
         return;
       }
-      router.push(data.needsOnboarding ? "/onboarding/create-org" : redirect);
+      router.push(data.needsOnboarding ? "/onboarding/workspace" : redirect);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");

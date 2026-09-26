@@ -31,6 +31,16 @@ export function validateOrganizationPayload(body: Record<string, unknown>) {
       phone: optionalText("phone", 40),
       email,
       website,
+      group_tier1_label:
+        typeof body.group_tier1_label === "string" && body.group_tier1_label.trim()
+          ? body.group_tier1_label.trim().slice(0, 40)
+          : "Team",
+      group_tier2_label:
+        typeof body.group_tier2_label === "string" && body.group_tier2_label.trim()
+          ? body.group_tier2_label.trim().slice(0, 40)
+          : "Sub-team",
+      hide_group_tier1: body.hide_group_tier1 === true,
+      hide_group_tier2: body.hide_group_tier2 === true,
     },
   } as const;
 }

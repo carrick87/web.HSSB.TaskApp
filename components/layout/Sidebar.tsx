@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CompanyProfile } from "@/lib/company/constants";
@@ -8,7 +7,8 @@ import { BrandMark, BrandMarkCompact } from "@/components/branding/BrandMark";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { formatOrgRoleLabel } from "@/lib/org/roles";
 import { ORG_ROLES, isOrgAdminRole, isOrgManagerOrAbove } from "@/lib/org/roles";
-import { OrgSwitcher } from "@/components/settings/OrgSwitcher";
+import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { PRODUCT_NAME } from "@/src/config/product";
 
 type NavItem = {
   href: string;
@@ -125,6 +125,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings/organization': 'Organization',
   '/settings/members': 'Members',
   '/settings/account': 'Account',
+  '/notifications': 'Notifications',
   '/platform': 'Platform',
   '/admin/branches': 'Branches',
   '/admin/departments': 'Departments',
@@ -218,6 +219,7 @@ export function Sidebar({
   company,
   orgId,
   currentOrgId,
+  workspaceName,
   organizations,
   isPlatformAdmin,
 }: {
@@ -226,27 +228,13 @@ export function Sidebar({
   company: CompanyProfile;
   orgId?: string;
   currentOrgId: string;
+  workspaceName: string;
   organizations: { org_id: string; role: string; organizations: { id: string; name: string; short_name: string | null; slug: string } | null }[];
   isPlatformAdmin: boolean;
 }) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
   const sections = getNavSections(orgRole, isPlatformAdmin);
   const pageTitle = getPageTitle(pathname);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsOpen(false);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
@@ -257,7 +245,6 @@ export function Sidebar({
   const NavContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">
-        <OrgSwitcher organizations={organizations} currentOrgId={currentOrgId} />
         {sections.map((section, idx) => (
           <div key={idx} className="mb-4">
             {section.title && (
@@ -308,78 +295,49 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile sticky top bar */}
       <header
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white flex items-center gap-3"
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white"
         style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingLeft: 'env(safe-area-inset-left, 0px)',
-          paddingRight: 'env(safe-area-inset-right, 0px)',
-          borderBottom: '1px solid #DFE1E6',
-          height: 'calc(56px + env(safe-area-inset-top, 0px))',
+          paddingTop: "var(--safe-area-inset-top)",
+          paddingLeft: "var(--safe-area-inset-left)",
+          paddingRight: "var(--safe-area-inset-right)",
+          borderBottom: "1px solid var(--neutral-border)",
+          height: "calc(var(--header-height) + var(--safe-area-inset-top))",
         }}
       >
-        <div className="flex items-center gap-3 px-3 h-14 w-full">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="flex items-center justify-center w-11 h-11 rounded-atlassian hover:bg-neutral-100 transition-colors tap-target"
-            style={{ color: '#172B4D' }}
-            aria-label="Open menu"
-          >
-            <MenuIcon />
-          </button>
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 px-3 h-14 w-full min-w-0">
+          <Link href="/dashboard" className="flex items-center shrink-0" aria-label={PRODUCT_NAME}>
             <BrandMarkCompact company={company} orgId={orgId} />
           </Link>
-          <span className="font-medium text-sm truncate" style={{ color: '#172B4D' }}>{pageTitle}</span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <WorkspaceSwitcher
+              organizations={organizations}
+              currentOrgId={currentOrgId}
+              workspaceName={workspaceName}
+            />
+            <span className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>
+              {pageTitle}
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40"
-          style={{ backgroundColor: 'rgba(23, 43, 77, 0.5)' }}
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Mobile sidebar drawer */}
-      <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-200 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          borderRight: '1px solid #DFE1E6',
-        }}
-      >
-        <div className="flex items-center justify-between h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <BrandMark company={company} size="sm" orgId={orgId} />
-          </Link>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="flex items-center justify-center w-11 h-11 rounded-atlassian hover:bg-neutral-100 transition-colors tap-target"
-            style={{ color: '#172B4D' }}
-            aria-label="Close menu"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-        <NavContent />
-      </aside>
-
-      {/* Desktop sidebar - lives in the grid's sidebar column, uses sticky positioning */}
       <aside
         className="desktop-sidebar hidden lg:flex flex-col bg-white"
-        style={{ borderRight: '1px solid #DFE1E6' }}
+        style={{ borderRight: "1px solid var(--neutral-border)" }}
       >
-        <div className="flex items-center h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+        <div
+          className="flex items-center h-14 px-4 gap-2 min-w-0"
+          style={{ borderBottom: "1px solid var(--neutral-border)" }}
+        >
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0 shrink-0">
             <BrandMark company={company} size="sm" orgId={orgId} />
           </Link>
+          <WorkspaceSwitcher
+            organizations={organizations}
+            currentOrgId={currentOrgId}
+            workspaceName={workspaceName}
+          />
         </div>
         <NavContent />
       </aside>

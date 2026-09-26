@@ -1,6 +1,7 @@
 import { requireOrgContext, getUserOrganizations } from "@/lib/org/context";
 import { organizationToCompanyProfile } from "@/lib/org/branding";
 import { Sidebar } from "./Sidebar";
+import { MobileTabBar } from "./MobileTabBar";
 
 export async function AppLayout({
   children,
@@ -10,6 +11,7 @@ export async function AppLayout({
   const ctx = await requireOrgContext();
   const organizations = await getUserOrganizations(ctx.profile.id);
   const company = organizationToCompanyProfile(ctx.org);
+  const workspaceName = ctx.org.short_name?.trim() || ctx.org.name;
 
   return (
     <div className="app-shell">
@@ -19,9 +21,11 @@ export async function AppLayout({
         company={company}
         orgId={ctx.org.id !== "legacy" ? ctx.org.id : undefined}
         currentOrgId={ctx.org.id}
+        workspaceName={workspaceName}
         organizations={organizations as unknown as Parameters<typeof Sidebar>[0]["organizations"]}
         isPlatformAdmin={!!ctx.profile.is_platform_admin}
       />
+      <MobileTabBar />
 
       <main className="main-content">
         <div className="min-h-screen px-4 pt-2 pb-4 lg:px-6 lg:py-6">

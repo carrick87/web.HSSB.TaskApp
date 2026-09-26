@@ -1,4 +1,4 @@
-import { requireProfile } from "@/lib/auth";
+import { requireProfile, requireOrgContext } from "@/lib/auth";
 import { getTask, updateTask, addTaskComment, deleteTaskComment } from "@/lib/tasks-v2";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
@@ -15,6 +15,7 @@ export default async function TaskDetailPage({
 }) {
   const { id } = await params;
   const profile = await requireProfile();
+  const ctx = await requireOrgContext();
   
   const task = await getTask(id);
   if (!task) {
@@ -102,7 +103,7 @@ export default async function TaskDetailPage({
             </CardContent>
           </Card>
 
-          <TaskAttachments task={task} canUpload={canEdit} />
+          <TaskAttachments task={task} orgId={ctx.org.id} canUpload={canEdit} />
 
           <Card>
             <CardHeader>

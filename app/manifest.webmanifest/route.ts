@@ -1,48 +1,30 @@
 import { NextResponse } from "next/server";
-import { getActiveOrgCompanyProfile } from "@/lib/company/profile";
-import { getCompanyLogoPublicUrl } from "@/lib/company/logo-url";
-import { getCurrentProfile } from "@/lib/auth";
-import { getActiveOrganization } from "@/lib/org/context";
-import { getOrgLogoPublicUrl } from "@/lib/org/logo-url";
+import {
+  PRODUCT_BACKGROUND_COLOR,
+  PRODUCT_ICON_PATHS,
+  PRODUCT_NAME,
+  PRODUCT_SHORT_NAME,
+  PRODUCT_TAGLINE,
+  PRODUCT_THEME_COLOR,
+} from "@/src/config/product";
 
+/** Static product PWA manifest — same icon/name for all installs (not per workspace). */
 export async function GET() {
-  const profile = await getCurrentProfile();
-  let company = await getActiveOrgCompanyProfile();
-  let orgId: string | undefined;
-  if (profile?.current_org_id) {
-    const active = await getActiveOrganization(profile.id, profile.current_org_id);
-    if (active) orgId = active.org.id;
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const squareUrl = orgId
-    ? getOrgLogoPublicUrl(supabaseUrl, orgId, company.logo_square_path)
-    : getCompanyLogoPublicUrl(supabaseUrl, company.logo_square_path);
-
-  const icons = squareUrl
-    ? [
-        { src: squareUrl, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: squareUrl, sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: squareUrl, sizes: "512x512", type: "image/png", purpose: "maskable" },
-      ]
-    : [
-        { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: "/icons/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-        { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-      ];
-
   return NextResponse.json({
-    name: company.name,
-    short_name: company.short_name || company.name,
-    description: company.tagline ?? "Task management for teams",
+    name: PRODUCT_NAME,
+    short_name: PRODUCT_SHORT_NAME,
+    description: PRODUCT_TAGLINE,
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    theme_color: "#0052CC",
-    background_color: "#F7F8F9",
+    theme_color: PRODUCT_THEME_COLOR,
+    background_color: PRODUCT_BACKGROUND_COLOR,
     orientation: "portrait-primary",
-    icons,
+    icons: [
+      { src: PRODUCT_ICON_PATHS.pwa192, sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: PRODUCT_ICON_PATHS.pwa512, sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: PRODUCT_ICON_PATHS.maskable512, sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
     categories: ["productivity", "business"],
     lang: "en",
     dir: "ltr",

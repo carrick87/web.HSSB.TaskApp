@@ -8,6 +8,11 @@ Apply **after** `001`–`005` (skip single-tenant `006`–`009` on new multi-ten
 2. `011_multitenant_org_id_hssb_backfill.sql` — `org_id` columns + HSSB org + memberships
 3. `012_multitenant_rls.sql` — org-scoped RLS
 4. `013_multitenant_storage.sql` — storage policies with `org_id/` prefix
+5. `014_product_notifications_grouping.sql` — grouping labels, notifications, push token table
+
+## Product branding
+
+Global PWA/name/icon: `src/config/product.ts` (placeholder **TaskApp**). Workspace logos only in-app header and invite/login — not in the manifest.
 
 ## Tables receiving `org_id`
 

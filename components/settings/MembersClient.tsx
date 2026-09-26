@@ -236,6 +236,15 @@ export function MembersClient({
         </CardContent>
       </Card>
 
+      {users.length <= 1 && (
+        <EmptyState
+          title="Invite your first teammate"
+          description="You're the first person in this workspace. Add colleagues when you're ready — no branch or department setup required."
+          actionLabel="Add member"
+          actionHref="/settings/members"
+        />
+      )}
+
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

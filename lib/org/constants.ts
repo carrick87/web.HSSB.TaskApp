@@ -17,4 +17,8 @@ export type Organization = {
   email: string | null;
   website: string | null;
   status: string;
+  group_tier1_label?: string;
+  group_tier2_label?: string;
+  hide_group_tier1?: boolean;
+  hide_group_tier2?: boolean;
 };

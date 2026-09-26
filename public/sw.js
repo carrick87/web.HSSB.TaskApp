@@ -5,7 +5,7 @@ const STATIC_ASSETS = [
   '/offline.html',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/manifest.json',
+  '/manifest.webmanifest',
 ];
 
 const NEVER_CACHE_PATTERNS = [

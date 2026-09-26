@@ -118,7 +118,7 @@ export async function requireOrgContext(): Promise<OrgContext> {
 
   // Not migrated yet or no org — onboarding
   if (!profile.current_org_id) {
-    redirect("/onboarding/create-org");
+    redirect("/onboarding/workspace");
   }
 
   return legacyOrgContext(profile as Profile);
