@@ -326,7 +326,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, task_app, pg_temp;
 
--- Cross-org reference guards (tasks/projects)
+-- Cross-org reference guards (tasks/projects/instances/members)
 CREATE OR REPLACE FUNCTION task_app.enforce_tenant_reference_org()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -334,6 +334,7 @@ SET search_path = public, task_app, pg_temp
 AS $$
 DECLARE
   v_ref_org UUID;
+  v_project_org UUID;
 BEGIN
   IF TG_TABLE_NAME = 'tasks' THEN
     IF NEW.department_id IS NOT NULL THEN
@@ -348,10 +349,46 @@ BEGIN
         RAISE EXCEPTION 'project_id must belong to the same organization';
       END IF;
     END IF;
-  ELSIF TG_TABLE_NAME = 'projects' AND NEW.department_id IS NOT NULL THEN
-    SELECT org_id INTO v_ref_org FROM public.departments WHERE id = NEW.department_id;
-    IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
-      RAISE EXCEPTION 'department_id must belong to the same organization';
+    IF NEW.assignee_id IS NOT NULL AND NEW.org_id IS NOT NULL THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = NEW.assignee_id AND om.org_id = NEW.org_id AND om.status = 'active'
+      ) THEN
+        RAISE EXCEPTION 'assignee_id must be an active member of the task organization';
+      END IF;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'projects' THEN
+    IF NEW.department_id IS NOT NULL THEN
+      SELECT org_id INTO v_ref_org FROM public.departments WHERE id = NEW.department_id;
+      IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+        RAISE EXCEPTION 'department_id must belong to the same organization';
+      END IF;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'task_instances' THEN
+    IF NEW.template_id IS NOT NULL THEN
+      SELECT org_id INTO v_ref_org FROM public.task_templates WHERE id = NEW.template_id;
+      IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+        RAISE EXCEPTION 'template_id must belong to the same organization';
+      END IF;
+    END IF;
+    IF NEW.assignee_profile_id IS NOT NULL AND NEW.org_id IS NOT NULL THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = NEW.assignee_profile_id AND om.org_id = NEW.org_id AND om.status = 'active'
+      ) THEN
+        RAISE EXCEPTION 'assignee_profile_id must be an active member of the instance organization';
+      END IF;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'project_members' THEN
+    SELECT org_id INTO v_project_org FROM public.projects WHERE id = NEW.project_id;
+    IF v_project_org IS NULL THEN
+      RAISE EXCEPTION 'project_id is invalid';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.user_id = NEW.profile_id AND om.org_id = v_project_org AND om.status = 'active'
+    ) THEN
+      RAISE EXCEPTION 'profile_id must be an active member of the project organization';
     END IF;
   END IF;
   RETURN NEW;
@@ -367,6 +404,36 @@ DROP TRIGGER IF EXISTS projects_enforce_tenant_refs ON public.projects;
 CREATE TRIGGER projects_enforce_tenant_refs
   BEFORE INSERT OR UPDATE ON public.projects
   FOR EACH ROW EXECUTE FUNCTION task_app.enforce_tenant_reference_org();
+
+DROP TRIGGER IF EXISTS task_instances_enforce_tenant_refs ON public.task_instances;
+CREATE TRIGGER task_instances_enforce_tenant_refs
+  BEFORE INSERT OR UPDATE ON public.task_instances
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_tenant_reference_org();
+
+DROP TRIGGER IF EXISTS project_members_enforce_tenant_refs ON public.project_members;
+CREATE TRIGGER project_members_enforce_tenant_refs
+  BEFORE INSERT OR UPDATE ON public.project_members
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_tenant_reference_org();
+
+CREATE OR REPLACE FUNCTION task_app.enforce_task_instance_status_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, task_app, pg_temp
+AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status
+     AND NEW.status IN ('verified', 'failed')
+     AND NOT public.is_org_manager_or_above(COALESCE(NEW.org_id, OLD.org_id)) THEN
+    RAISE EXCEPTION 'Only managers or admins can set verified or failed status';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS task_instances_status_guard ON public.task_instances;
+CREATE TRIGGER task_instances_status_guard
+  BEFORE UPDATE OF status ON public.task_instances
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_task_instance_status_change();
 
 -- =============================================================================
 -- Tenant RLS policy audit (fail migration if policies omit org membership)
@@ -411,12 +478,81 @@ BEGIN
 END;
 $$;
 
-SELECT task_app.assert_tenant_policies_reference_org();
+-- Organizations: org admins may edit branding fields only; status/slug are platform-admin only
+REVOKE UPDATE ON public.organizations FROM authenticated;
+GRANT UPDATE (
+  name,
+  short_name,
+  logo_wide_path,
+  logo_square_path,
+  registration_no,
+  address,
+  phone,
+  email,
+  website
+) ON public.organizations TO authenticated;
+
+CREATE OR REPLACE FUNCTION task_app.enforce_organizations_admin_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, task_app, pg_temp
+AS $$
+DECLARE
+  jwt_role TEXT := COALESCE(auth.role(), NULLIF(current_setting('request.jwt.claim.role', true), ''));
+BEGIN
+  IF jwt_role IN ('service_role', 'supabase_admin') OR current_user = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF public.is_platform_admin() THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.status IS DISTINCT FROM OLD.status OR NEW.slug IS DISTINCT FROM OLD.slug THEN
+    RAISE EXCEPTION 'organization status and slug can only be changed by platform administrators';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS organizations_admin_update_guard ON public.organizations;
+CREATE TRIGGER organizations_admin_update_guard
+  BEFORE UPDATE ON public.organizations
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_organizations_admin_update();
+
+CREATE OR REPLACE FUNCTION public.user_branch_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT branch_id FROM public.profiles WHERE id = auth.uid()
+$$;
+
+CREATE OR REPLACE FUNCTION public.user_department_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT department_id FROM public.profiles WHERE id = auth.uid()
+$$;
+
+ALTER TABLE public.task_template_questions
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
 
 -- task_instance_answers org-scoped (legacy 001/007 policies dropped above)
 ALTER TABLE public.task_instance_answers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "task_instance_answers_org_select" ON public.task_instance_answers;
 DROP POLICY IF EXISTS "task_instance_answers_org_write" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_assignee_insert" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_assignee_update" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_manager_update" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_manager_delete" ON public.task_instance_answers;
+
 CREATE POLICY "task_instance_answers_org_select" ON public.task_instance_answers FOR SELECT TO authenticated
   USING (
     EXISTS (
@@ -424,16 +560,55 @@ CREATE POLICY "task_instance_answers_org_select" ON public.task_instance_answers
       WHERE ti.id = task_instance_id AND public.is_org_member(ti.org_id)
     )
   );
-CREATE POLICY "task_instance_answers_org_write" ON public.task_instance_answers FOR ALL TO authenticated
+
+CREATE POLICY "task_instance_answers_assignee_insert" ON public.task_instance_answers FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.task_instances ti
+      WHERE ti.id = task_instance_id
+        AND ti.assignee_profile_id = auth.uid()
+        AND public.is_org_member(ti.org_id)
+    )
+  );
+
+CREATE POLICY "task_instance_answers_assignee_update" ON public.task_instance_answers FOR UPDATE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.task_instances ti
-      WHERE ti.id = task_instance_id AND public.is_org_member(ti.org_id)
+      WHERE ti.id = task_instance_id
+        AND ti.assignee_profile_id = auth.uid()
+        AND public.is_org_member(ti.org_id)
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.task_instances ti
-      WHERE ti.id = task_instance_id AND public.is_org_member(ti.org_id)
+      WHERE ti.id = task_instance_id
+        AND ti.assignee_profile_id = auth.uid()
+        AND public.is_org_member(ti.org_id)
     )
   );
+
+CREATE POLICY "task_instance_answers_manager_update" ON public.task_instance_answers FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.task_instances ti
+      WHERE ti.id = task_instance_id AND public.is_org_manager_or_above(ti.org_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.task_instances ti
+      WHERE ti.id = task_instance_id AND public.is_org_manager_or_above(ti.org_id)
+    )
+  );
+
+CREATE POLICY "task_instance_answers_manager_delete" ON public.task_instance_answers FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.task_instances ti
+      WHERE ti.id = task_instance_id AND public.is_org_manager_or_above(ti.org_id)
+    )
+  );
+
+SELECT task_app.assert_tenant_policies_reference_org();

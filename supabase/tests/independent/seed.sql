@@ -1,0 +1,2 @@
+-- Independent harness uses the shared production-shaped seed from replay:
+--   supabase/tests/seed_production_shape.sql (via scripts/replay-migrations.sh)

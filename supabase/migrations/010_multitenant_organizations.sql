@@ -4,6 +4,13 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- One-time migration markers (service role only; not exposed to tenants)
+CREATE TABLE IF NOT EXISTS public.migration_state (
+  key TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+REVOKE ALL ON public.migration_state FROM PUBLIC, anon, authenticated;
+
 CREATE TABLE IF NOT EXISTS public.organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL CHECK (char_length(name) <= 80),

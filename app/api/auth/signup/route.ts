@@ -129,16 +129,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: memberError.message }, { status: 500 });
       }
 
-      const { error: usedError } = await admin
+      const { data: consumed, error: usedError } = await admin
         .from("organization_invites")
         .update({ status: "accepted" })
         .eq("id", invite.id)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
       if (usedError) {
         await admin.from("organization_members").delete().eq("user_id", authUser.user.id).eq("org_id", invite.org_id);
         await admin.from("profiles").delete().eq("id", authUser.user.id);
         await admin.auth.admin.deleteUser(authUser.user.id);
         return NextResponse.json({ error: usedError.message }, { status: 500 });
+      }
+      if (!consumed?.length) {
+        await admin.from("organization_members").delete().eq("user_id", authUser.user.id).eq("org_id", invite.org_id);
+        await admin.from("profiles").delete().eq("id", authUser.user.id);
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: "Invitation was already used." }, { status: 409 });
       }
 
       if (invite.invited_by) {

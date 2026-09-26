@@ -39,8 +39,8 @@ BEGIN
     'b2000000-0000-0000-0000-000000000099'::uuid,
     'Org B secret task',
     'b2000000-0000-0000-0000-000000000011'::uuid,
-    v_owner_a,
-    v_owner_a,
+    v_member_b,
+    v_member_b,
     'b2000000-0000-0000-0000-000000000002'::uuid,
     'todo',
     'low'

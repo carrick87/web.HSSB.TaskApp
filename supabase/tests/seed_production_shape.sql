@@ -16,7 +16,8 @@
 \set dept2_id 'd1000000-0000-0000-0000-000000000002'
 \set template_id 'c1000000-0000-0000-0000-000000000001'
 \set q1_id 'c1000000-0000-0000-0000-000000000002'
-\set q2_id 'c1000000-0000-0000-0000-000000000003'
+\set q_file_id 'c1000000-0000-0000-0000-000000000004'
+\set file_instance_id 'c1000000-0000-0000-0000-000000000020'
 \set project_id 'c1000000-0000-0000-0000-000000000010'
 \set task1_id 'c1000000-0000-0000-0000-000000000011'
 \set task2_id 'c1000000-0000-0000-0000-000000000012'
@@ -73,7 +74,18 @@ INSERT INTO public.task_templates (id, title, description, created_by_profile_id
 
 INSERT INTO public.task_template_questions (id, template_id, question_text, answer_type, sort_order) VALUES
   ('c1000000-0000-0000-0000-000000000002'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 'Question one', 'text', 0),
-  ('c1000000-0000-0000-0000-000000000003'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 'Question two', 'boolean', 1);
+  ('c1000000-0000-0000-0000-000000000003'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 'Question two', 'boolean', 1),
+  ('c1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 'Upload proof', 'file', 2);
+
+INSERT INTO public.task_instances (id, template_id, assignee_profile_id, assignment_date, due_date, status)
+VALUES (
+  'c1000000-0000-0000-0000-000000000020'::uuid,
+  'c1000000-0000-0000-0000-000000000001'::uuid,
+  '78925121-0000-4000-8000-000000000005'::uuid,
+  CURRENT_DATE,
+  (CURRENT_DATE + 1)::timestamp - interval '1 second',
+  'accepted'
+);
 
 INSERT INTO public.task_instances (id, template_id, assignee_profile_id, assignment_date, due_date, status)
 SELECT
@@ -89,11 +101,18 @@ SELECT
   'pending'
 FROM generate_series(1, 211) AS g(i);
 
-INSERT INTO public.task_instance_answers (task_instance_id, question_id, answer_text)
-SELECT ti.id, 'c1000000-0000-0000-0000-000000000002'::uuid, 'seed answer'
+INSERT INTO public.task_instance_answers (task_instance_id, question_id, answer_text, answer_file_url)
+SELECT ti.id, 'c1000000-0000-0000-0000-000000000002'::uuid, 'seed answer', NULL
 FROM public.task_instances ti
 ORDER BY ti.created_at
 LIMIT 4;
+
+INSERT INTO public.task_instance_answers (task_instance_id, question_id, answer_file_url)
+VALUES (
+  'c1000000-0000-0000-0000-000000000020'::uuid,
+  'c1000000-0000-0000-0000-000000000004'::uuid,
+  '78925121-0000-4000-8000-000000000005/c1000000-0000-0000-0000-000000000020/proof.pdf'
+);
 
 INSERT INTO public.projects (id, name, description, department_id, created_by) VALUES
   ('c1000000-0000-0000-0000-000000000010'::uuid, 'Seed project', 'Replay seed', 'd1000000-0000-0000-0000-000000000001'::uuid, '78925121-0000-4000-8000-000000000001'::uuid);
@@ -131,7 +150,13 @@ INSERT INTO public.point_settings (event_type, points) VALUES
   ('not_completed', -5)
 ON CONFLICT (event_type) DO UPDATE SET points = EXCLUDED.points;
 
-INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
-  ('task-attachments', 'c1000000-0000-0000-0000-000000000011/file-a.pdf', '78925121-0000-4000-8000-000000000001'),
-  ('task-attachments', 'c1000000-0000-0000-0000-000000000012/file-b.pdf', '78925121-0000-4000-8000-000000000003'),
-  ('task-attachments', 'c1000000-0000-0000-0000-000000000013/file-c.pdf', '78925121-0000-4000-8000-000000000001');
+INSERT INTO storage.objects (bucket_id, name, owner_id, owner) VALUES
+  ('task-attachments', 'c1000000-0000-0000-0000-000000000011/file-a.pdf', '78925121-0000-4000-8000-000000000001', '78925121-0000-4000-8000-000000000001'::uuid),
+  ('task-attachments', 'c1000000-0000-0000-0000-000000000012/file-b.pdf', '78925121-0000-4000-8000-000000000003', '78925121-0000-4000-8000-000000000003'::uuid),
+  ('task-attachments', 'c1000000-0000-0000-0000-000000000013/file-c.pdf', '78925121-0000-4000-8000-000000000001', '78925121-0000-4000-8000-000000000001'::uuid),
+  (
+    'task-files',
+    '78925121-0000-4000-8000-000000000005/c1000000-0000-0000-0000-000000000020/proof.pdf',
+    '78925121-0000-4000-8000-000000000005',
+    '78925121-0000-4000-8000-000000000005'::uuid
+  );

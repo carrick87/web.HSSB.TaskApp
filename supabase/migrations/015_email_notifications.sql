@@ -106,7 +106,8 @@ CREATE POLICY notification_events_select_own ON public.notification_events
   FOR SELECT USING (user_id = auth.uid() AND public.is_org_member(org_id));
 
 CREATE POLICY email_preferences_own ON public.email_preferences
-  FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+  FOR ALL USING (user_id = auth.uid() AND public.is_org_member(org_id))
+  WITH CHECK (user_id = auth.uid() AND public.is_org_member(org_id));
 
 CREATE POLICY task_watchers_select ON public.task_watchers
   FOR SELECT USING (user_id = auth.uid() AND public.is_org_member(org_id));

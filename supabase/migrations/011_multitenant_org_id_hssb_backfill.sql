@@ -82,26 +82,42 @@ BEGIN
   UPDATE public.user_points SET org_id = v_hssb_id WHERE org_id IS NULL;
   UPDATE public.task_user_stats SET org_id = v_hssb_id WHERE org_id IS NULL;
 
-  -- Memberships from legacy profiles.role (admin/super_admin→owner, pic/manager→manager, staff/user→member)
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'status') THEN
-    INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
-    SELECT v_hssb_id, p.id,
-      CASE WHEN p.role IN ('admin', 'super_admin') THEN 'owner' WHEN p.role IN ('pic', 'manager') THEN 'manager' ELSE 'member' END,
-      p.branch_id, p.department_id, 'active'
-    FROM public.profiles p
-    ON CONFLICT (org_id, user_id) DO NOTHING;
-  ELSE
-    INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
-    SELECT v_hssb_id, p.id,
-      CASE WHEN p.role IN ('admin', 'super_admin') THEN 'owner' WHEN p.role IN ('pic', 'manager') THEN 'manager' ELSE 'member' END,
-      p.branch_id, p.department_id, CASE WHEN p.status = 'deactivated' THEN 'deactivated' ELSE 'active' END
-    FROM public.profiles p
-    ON CONFLICT (org_id, user_id) DO NOTHING;
-  END IF;
+  -- Membership + current_org backfill runs once (re-runs after go-live must not absorb other orgs / new signups)
+  IF NOT EXISTS (SELECT 1 FROM public.migration_state WHERE key = '011_hssb_profile_backfill') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'status') THEN
+      INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
+      SELECT v_hssb_id, p.id,
+        CASE
+          WHEN p.username LIKE 'demo\_%' ESCAPE '\' THEN 'member'
+          WHEN p.username = 'admin' THEN 'owner'
+          WHEN p.role IN ('admin', 'super_admin') THEN 'owner'
+          WHEN p.role IN ('pic', 'manager') THEN 'manager'
+          ELSE 'member'
+        END,
+        p.branch_id, p.department_id, 'active'
+      FROM public.profiles p
+      ON CONFLICT (org_id, user_id) DO NOTHING;
+    ELSE
+      INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
+      SELECT v_hssb_id, p.id,
+        CASE
+          WHEN p.username LIKE 'demo\_%' ESCAPE '\' THEN 'member'
+          WHEN p.username = 'admin' THEN 'owner'
+          WHEN p.role IN ('admin', 'super_admin') THEN 'owner'
+          WHEN p.role IN ('pic', 'manager') THEN 'manager'
+          ELSE 'member'
+        END,
+        p.branch_id, p.department_id, CASE WHEN p.status = 'deactivated' THEN 'deactivated' ELSE 'active' END
+      FROM public.profiles p
+      ON CONFLICT (org_id, user_id) DO NOTHING;
+    END IF;
 
-  UPDATE public.profiles
-  SET current_org_id = v_hssb_id
-  WHERE current_org_id IS NULL;
+    UPDATE public.profiles
+    SET current_org_id = v_hssb_id
+    WHERE current_org_id IS NULL;
+
+    INSERT INTO public.migration_state (key) VALUES ('011_hssb_profile_backfill');
+  END IF;
 END $$;
 
 -- FK org members → branches/departments (scoped)
@@ -164,7 +180,15 @@ BEGIN
   IF v_hssb_id IS NOT NULL AND v_admin_id IS NOT NULL THEN
     INSERT INTO public.organization_members (org_id, user_id, role, status)
     VALUES (v_hssb_id, v_admin_id, 'owner', 'active')
-    ON CONFLICT (org_id, user_id) DO NOTHING;
+    ON CONFLICT (org_id, user_id) DO UPDATE SET role = 'owner';
+
+    UPDATE public.organization_members om
+    SET role = 'member'
+    FROM public.profiles p
+    WHERE om.org_id = v_hssb_id
+      AND om.user_id = p.id
+      AND p.username LIKE 'demo\_%' ESCAPE '\'
+      AND om.role = 'owner';
 
     UPDATE public.profiles SET current_org_id = v_hssb_id
     WHERE id = v_admin_id AND current_org_id IS NULL;
