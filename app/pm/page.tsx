@@ -1,8 +1,81 @@
 import { requireProfile } from "@/lib/auth";
 import { getMyTasks } from "@/lib/tasks-v2";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Link from "next/link";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
+
+function KanbanColumn({
+  title,
+  count,
+  tasks,
+  bgColor,
+}: {
+  title: string;
+  count: number;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    priority: "low" | "medium" | "high";
+    due_date: string | null;
+    project?: { name: string } | null;
+  }>;
+  bgColor: string;
+}) {
+  return (
+    <div className="flex flex-col min-w-[280px] lg:min-w-0 lg:flex-1">
+      <div className={`px-3 py-2 rounded-t-atlassian ${bgColor}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wide">{title}</span>
+          <span className="bg-white/80 text-neutral-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+            {count}
+          </span>
+        </div>
+      </div>
+      <div className="flex-1 bg-neutral-100 p-2 rounded-b-atlassian space-y-2 min-h-[200px]">
+        {tasks.map((task) => (
+          <Link
+            key={task.id}
+            href={`/pm/tasks/${task.id}`}
+            className="block bg-white rounded-atlassian shadow-atlassian-sm p-3 hover:bg-neutral-50 transition-colors"
+          >
+            <p className="font-medium text-sm text-neutral-1000 line-clamp-2">
+              {task.title}
+            </p>
+            {task.description && (
+              <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                {task.description}
+              </p>
+            )}
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-2">
+                {task.project ? (
+                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-atlassian-purple-light text-atlassian-purple">
+                    {task.project.name}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-600">
+                    Private
+                  </span>
+                )}
+              </div>
+              <TaskPriorityBadge priority={task.priority} />
+            </div>
+            {task.due_date && (
+              <p className="text-[10px] text-neutral-500 mt-2">
+                Due: {new Date(task.due_date).toLocaleDateString()}
+              </p>
+            )}
+          </Link>
+        ))}
+        {tasks.length === 0 && (
+          <div className="flex items-center justify-center h-20 text-xs text-neutral-500">
+            No tasks
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default async function MyTasksPage() {
   const profile = await requireProfile();
@@ -14,86 +87,35 @@ export default async function MyTasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">To Do</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {todoTasks.length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">In Progress</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {inProgressTasks.length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Completed</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {doneTasks.length}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-1000">My Tasks</h1>
+          <p className="text-sm text-neutral-600 mt-0.5">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned to you
+          </p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>My Tasks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tasks.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400">
-              No tasks assigned to you yet.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {tasks.map((task) => (
-                <Link
-                  key={task.id}
-                  href={`/pm/tasks/${task.id}`}
-                  className="block p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                        {task.title}
-                      </h3>
-                      {task.description && (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                          {task.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                        {task.project ? (
-                          <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">
-                            {task.project.name}
-                          </span>
-                        ) : (
-                          <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded">
-                            Private
-                          </span>
-                        )}
-                        {task.due_date && (
-                          <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <TaskStatusBadge status={task.status} />
-                      <TaskPriorityBadge priority={task.priority} />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 lg:mx-0 lg:px-0">
+        <KanbanColumn
+          title="To Do"
+          count={todoTasks.length}
+          tasks={todoTasks}
+          bgColor="bg-neutral-200 text-neutral-700"
+        />
+        <KanbanColumn
+          title="In Progress"
+          count={inProgressTasks.length}
+          tasks={inProgressTasks}
+          bgColor="bg-brand-100 text-brand-800"
+        />
+        <KanbanColumn
+          title="Done"
+          count={doneTasks.length}
+          tasks={doneTasks}
+          bgColor="bg-atlassian-green-light text-green-700"
+        />
+      </div>
     </div>
   );
 }

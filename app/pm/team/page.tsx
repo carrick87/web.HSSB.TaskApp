@@ -10,8 +10,13 @@ export default async function TeamTasksPage() {
   if (!profile.department_id && profile.role !== "admin") {
     return (
       <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-slate-500 dark:text-slate-400">
+        <CardContent className="py-12 text-center">
+          <div className="w-12 h-12 bg-atlassian-yellow-light rounded-atlassian flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-atlassian-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-neutral-600 text-sm">
             You are not assigned to a department. Please contact an admin.
           </p>
         </CardContent>
@@ -36,66 +41,75 @@ export default async function TeamTasksPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          Team Tasks
-        </h2>
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-1000">Team Tasks</h1>
+          <p className="text-sm text-neutral-600 mt-0.5">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""} across {Object.keys(groupedByAssignee).length} team member{Object.keys(groupedByAssignee).length !== 1 ? "s" : ""}
+          </p>
+        </div>
         <Link
           href="/pm/tasks/new"
-          className="rounded-lg bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 px-4 py-2 text-sm font-medium hover:opacity-90"
+          className="inline-flex items-center justify-center h-9 px-4 rounded-atlassian bg-brand-700 text-white text-sm font-medium hover:bg-brand-800 transition-colors shadow-atlassian-sm"
         >
-          Assign New Task
+          Assign Task
         </Link>
       </div>
 
       {tasks.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-slate-500 dark:text-slate-400">
+          <CardContent className="py-12 text-center">
+            <div className="w-12 h-12 bg-neutral-100 rounded-atlassian flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p className="text-neutral-600 text-sm">
               No tasks in your team yet.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(groupedByAssignee).map(([assigneeId, { name, tasks: assigneeTasks }]) => (
             <Card key={assigneeId}>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {name}
-                  <span className="ml-2 text-sm font-normal text-slate-500 dark:text-slate-400">
-                    ({assigneeTasks.length} tasks)
-                  </span>
-                </CardTitle>
+              <CardHeader className="flex flex-row items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-semibold">
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <CardTitle>{name}</CardTitle>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {assigneeTasks.length} task{assigneeTasks.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+              <CardContent className="p-0">
+                <div className="divide-y divide-neutral-100">
                   {assigneeTasks.map((task) => (
                     <Link
                       key={task.id}
                       href={`/pm/tasks/${task.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                      className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-neutral-50 transition-colors"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                            {task.title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 text-xs">
-                            {task.project ? (
-                              <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">
-                                {task.project.name}
-                              </span>
-                            ) : (
-                              <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded">
-                                Private
-                              </span>
-                            )}
-                            {task.due_date && (
-                              <span className="text-slate-500 dark:text-slate-400">
-                                Due: {new Date(task.due_date).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-neutral-1000 truncate">
+                          {task.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {task.project ? (
+                            <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-atlassian-purple-light text-atlassian-purple">
+                              {task.project.name}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-atlassian px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-600">
+                              Private
+                            </span>
+                          )}
+                          {task.due_date && (
+                            <span className="text-xs text-neutral-500">
+                              Due: {new Date(task.due_date).toLocaleDateString()}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

@@ -52,48 +52,55 @@ export default async function DashboardPage() {
     (pointsRes.data ?? []).reduce((s, r) => s + (r.points_earned ?? 0), 0);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-        Today&apos;s Tasks
-      </h1>
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-1000">
+            Dashboard
+          </h1>
+          <p className="text-sm text-neutral-600 mt-0.5">
+            Welcome back, {profile.username}
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <CardContent className="py-4">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
               Tasks Today
             </p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-2xl font-bold text-neutral-1000 mt-1">
               {tasksRaw.length}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <CardContent className="py-4">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
               Completed
             </p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-2xl font-bold text-atlassian-green mt-1">
               {stats?.total_completed ?? 0}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Late Submissions
+          <CardContent className="py-4">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+              Late
             </p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-2xl font-bold text-atlassian-yellow mt-1">
               {stats?.total_late_submissions ?? 0}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              My Points This Month
+          <CardContent className="py-4">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+              Points (Month)
             </p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-2xl font-bold text-brand-700 mt-1">
               {pointsThisMonth}
             </p>
           </CardContent>
@@ -102,49 +109,44 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tasks for today</CardTitle>
+          <CardTitle>Today&apos;s Tasks</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {tasksRaw.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400">
-              No tasks assigned for today.
-            </p>
+            <div className="px-4 py-8 text-center">
+              <p className="text-neutral-500 text-sm">
+                No tasks assigned for today.
+              </p>
+            </div>
           ) : (
-            <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+            <div className="divide-y divide-neutral-200">
               {tasksRaw.map((task: { id: string; status: string; is_late: boolean; template: unknown }) => (
-                <li key={task.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/tasks/${task.id}`}
-                        className="font-medium text-slate-900 dark:text-slate-100 hover:underline"
-                      >
-                        {titleOf(task.template) || "Task"}
-                      </Link>
-                      {descOf(task.template) && (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {descOf(task.template)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {task.is_late && (
-                        <span className="text-xs text-amber-600 dark:text-amber-400">
-                          Late
-                        </span>
-                      )}
-                      <StatusBadge status={task.status as "pending" | "accepted" | "submitted" | "verified" | "rejected" | "failed"} />
-                      <Link
-                        href={`/tasks/${task.id}`}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        View
-                      </Link>
-                    </div>
+                <Link
+                  key={task.id}
+                  href={`/tasks/${task.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-neutral-50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-neutral-1000 text-sm">
+                      {titleOf(task.template) || "Task"}
+                    </p>
+                    {descOf(task.template) && (
+                      <p className="text-sm text-neutral-500 truncate mt-0.5">
+                        {descOf(task.template)}
+                      </p>
+                    )}
                   </div>
-                </li>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {task.is_late && (
+                      <span className="inline-flex items-center rounded-atlassian px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide bg-atlassian-yellow-light text-yellow-700">
+                        Late
+                      </span>
+                    )}
+                    <StatusBadge status={task.status as "pending" | "accepted" | "submitted" | "verified" | "rejected" | "failed"} />
+                  </div>
+                </Link>
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>

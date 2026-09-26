@@ -15,10 +15,15 @@ export default async function LeaderboardPage() {
   const initialData = await getLeaderboard({ period: "month", month, year });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-        Leaderboard
-      </h1>
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <h1 className="text-xl font-semibold text-neutral-1000">
+          Leaderboard
+        </h1>
+        <p className="text-sm text-neutral-600 mt-0.5">
+          Top performers by points earned
+        </p>
+      </div>
       <LeaderboardClient
         initialData={initialData}
         branches={branches ?? []}

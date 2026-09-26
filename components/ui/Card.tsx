@@ -4,7 +4,7 @@ export function Card({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm ${className}`}
+      className={`rounded-atlassian bg-white border border-neutral-200 shadow-atlassian-sm ${className}`}
       {...props}
     />
   );
@@ -14,14 +14,14 @@ export function CardHeader({
   className = "",
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={`p-4 border-b border-slate-200 dark:border-slate-700 ${className}`} {...props} />;
+  return <div className={`px-4 py-3 border-b border-neutral-200 ${className}`} {...props} />;
 }
 
 export function CardTitle({
   className = "",
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={`text-lg font-semibold text-slate-900 dark:text-slate-100 ${className}`} {...props} />;
+  return <h3 className={`text-sm font-semibold text-neutral-1000 ${className}`} {...props} />;
 }
 
 export function CardContent({
@@ -29,4 +29,11 @@ export function CardContent({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={`p-4 ${className}`} {...props} />;
+}
+
+export function CardDescription({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={`text-sm text-neutral-600 mt-1 ${className}`} {...props} />;
 }

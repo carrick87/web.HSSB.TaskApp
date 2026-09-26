@@ -1,21 +1,21 @@
 import type { TaskStatus2, TaskPriority } from "@/types/database.types";
 
 const statusClasses: Record<TaskStatus2, string> = {
-  todo: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  done: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  todo: "bg-neutral-200 text-neutral-700",
+  in_progress: "bg-brand-50 text-brand-800",
+  done: "bg-atlassian-green-light text-green-700",
 };
 
 const statusLabels: Record<TaskStatus2, string> = {
-  todo: "To Do",
-  in_progress: "In Progress",
-  done: "Done",
+  todo: "TO DO",
+  in_progress: "IN PROGRESS",
+  done: "DONE",
 };
 
 export function TaskStatusBadge({ status }: { status: TaskStatus2 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClasses[status]}`}
+      className={`inline-flex items-center rounded-atlassian px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${statusClasses[status]}`}
     >
       {statusLabels[status]}
     </span>
@@ -23,9 +23,15 @@ export function TaskStatusBadge({ status }: { status: TaskStatus2 }) {
 }
 
 const priorityClasses: Record<TaskPriority, string> = {
-  low: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
-  medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  low: "text-atlassian-green",
+  medium: "text-atlassian-yellow",
+  high: "text-atlassian-red",
+};
+
+const priorityIcons: Record<TaskPriority, string> = {
+  low: "↓",
+  medium: "=",
+  high: "↑",
 };
 
 const priorityLabels: Record<TaskPriority, string> = {
@@ -37,9 +43,11 @@ const priorityLabels: Record<TaskPriority, string> = {
 export function TaskPriorityBadge({ priority }: { priority: TaskPriority }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${priorityClasses[priority]}`}
+      className={`inline-flex items-center gap-1 text-xs font-medium ${priorityClasses[priority]}`}
+      title={`${priorityLabels[priority]} priority`}
     >
-      {priorityLabels[priority]}
+      <span className="text-sm font-bold">{priorityIcons[priority]}</span>
+      <span className="sr-only">{priorityLabels[priority]}</span>
     </span>
   );
 }
