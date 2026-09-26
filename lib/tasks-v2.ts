@@ -77,13 +77,13 @@ export async function getTask(id: string): Promise<Task | null> {
       comments:task_comments(*, author:profiles(*))
     `)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching task:", error);
     return null;
   }
-  return data as unknown as Task;
+  return data as unknown as Task | null;
 }
 
 export async function createTask(data: {

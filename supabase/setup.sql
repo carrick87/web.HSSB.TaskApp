@@ -3,7 +3,8 @@
 -- =============================================================================
 -- Run this entire script in the Supabase SQL Editor to set up the database.
 -- This script is IDEMPOTENT — safe to run multiple times.
--- After running this, create the storage buckets in the Dashboard:
+--
+-- Storage buckets are created via SQL below. If they fail, create manually:
 --   1. 'task-files' (private, 10MB limit) - for legacy task instance answers
 --   2. 'task-attachments' (private, 10MB limit) - for new task attachments
 -- =============================================================================
@@ -28,48 +29,47 @@ REVOKE ALL ON SCHEMA private FROM authenticated;
 GRANT USAGE ON SCHEMA private TO authenticated;
 
 -- =============================================================================
--- TABLES (order respects FK dependencies)
+-- LEGACY TABLES (001-004 migrations)
 -- =============================================================================
 
 -- 1. branches
-CREATE TABLE IF NOT EXISTS branches (
+CREATE TABLE IF NOT EXISTS public.branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL
 );
 
 -- 2. departments
-CREATE TABLE IF NOT EXISTS departments (
+CREATE TABLE IF NOT EXISTS public.departments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
   name TEXT NOT NULL
 );
 
 -- 3. profiles (extends auth.users)
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE NOT NULL,
   harrison_email TEXT,
   auth_email TEXT NOT NULL,
-  branch_id UUID REFERENCES branches(id),
-  department_id UUID REFERENCES departments(id),
+  branch_id UUID REFERENCES public.branches(id),
+  department_id UUID REFERENCES public.departments(id),
   role TEXT NOT NULL CHECK (role IN ('admin', 'pic', 'staff')),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Add unique constraint on auth_email if not exists
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_auth_email_key') THEN
-    ALTER TABLE profiles ADD CONSTRAINT profiles_auth_email_key UNIQUE (auth_email);
+    ALTER TABLE public.profiles ADD CONSTRAINT profiles_auth_email_key UNIQUE (auth_email);
   END IF;
 END $$;
 
 -- 4. task_templates (legacy recurring tasks)
-CREATE TABLE IF NOT EXISTS task_templates (
+CREATE TABLE IF NOT EXISTS public.task_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
-  created_by_profile_id UUID REFERENCES profiles(id),
+  created_by_profile_id UUID REFERENCES public.profiles(id),
   recurrence_type TEXT NOT NULL CHECK (recurrence_type IN ('daily', 'monthly', 'custom')),
   recurrence_value INT,
   start_date DATE,
@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS task_templates (
 );
 
 -- 5. task_template_questions
-CREATE TABLE IF NOT EXISTS task_template_questions (
+CREATE TABLE IF NOT EXISTS public.task_template_questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id UUID NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES public.task_templates(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
   answer_type TEXT NOT NULL CHECK (answer_type IN ('text', 'number', 'boolean', 'choice', 'file')),
   is_required BOOLEAN DEFAULT true,
@@ -93,10 +93,10 @@ CREATE TABLE IF NOT EXISTS task_template_questions (
 );
 
 -- 6. task_instances (legacy)
-CREATE TABLE IF NOT EXISTS task_instances (
+CREATE TABLE IF NOT EXISTS public.task_instances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id UUID NOT NULL REFERENCES task_templates(id),
-  assignee_profile_id UUID NOT NULL REFERENCES profiles(id),
+  template_id UUID NOT NULL REFERENCES public.task_templates(id),
+  assignee_profile_id UUID NOT NULL REFERENCES public.profiles(id),
   assignment_date DATE NOT NULL,
   due_date TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'submitted', 'verified', 'rejected', 'failed')),
@@ -110,10 +110,10 @@ CREATE TABLE IF NOT EXISTS task_instances (
 );
 
 -- 7. task_instance_answers
-CREATE TABLE IF NOT EXISTS task_instance_answers (
+CREATE TABLE IF NOT EXISTS public.task_instance_answers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_instance_id UUID NOT NULL REFERENCES task_instances(id) ON DELETE CASCADE,
-  question_id UUID NOT NULL REFERENCES task_template_questions(id),
+  task_instance_id UUID NOT NULL REFERENCES public.task_instances(id) ON DELETE CASCADE,
+  question_id UUID NOT NULL REFERENCES public.task_template_questions(id),
   answer_text TEXT,
   answer_number NUMERIC,
   answer_boolean BOOLEAN,
@@ -121,8 +121,8 @@ CREATE TABLE IF NOT EXISTS task_instance_answers (
 );
 
 -- 8. task_user_stats
-CREATE TABLE IF NOT EXISTS task_user_stats (
-  profile_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS public.task_user_stats (
+  profile_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   total_completed INT DEFAULT 0,
   total_late_submissions INT DEFAULT 0,
   total_failed INT DEFAULT 0,
@@ -130,19 +130,19 @@ CREATE TABLE IF NOT EXISTS task_user_stats (
 );
 
 -- 9. point_settings
-CREATE TABLE IF NOT EXISTS point_settings (
+CREATE TABLE IF NOT EXISTS public.point_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_type TEXT UNIQUE NOT NULL CHECK (event_type IN ('completed_on_time', 'completed_late', 'failed', 'not_completed')),
   points INT NOT NULL,
-  updated_by UUID REFERENCES profiles(id),
+  updated_by UUID REFERENCES public.profiles(id),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 10. user_points
-CREATE TABLE IF NOT EXISTS user_points (
+CREATE TABLE IF NOT EXISTS public.user_points (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL REFERENCES profiles(id),
-  task_instance_id UUID REFERENCES task_instances(id),
+  profile_id UUID NOT NULL REFERENCES public.profiles(id),
+  task_instance_id UUID REFERENCES public.task_instances(id),
   event_type TEXT,
   points_earned INT NOT NULL,
   earned_at TIMESTAMPTZ DEFAULT now(),
@@ -150,58 +150,62 @@ CREATE TABLE IF NOT EXISTS user_points (
   year INT
 );
 
--- 11. projects (NEW)
-CREATE TABLE IF NOT EXISTS projects (
+-- =============================================================================
+-- NEW TABLES (005 migration - Project Management)
+-- =============================================================================
+
+-- 11. projects
+CREATE TABLE IF NOT EXISTS public.projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
-  created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  department_id UUID NOT NULL REFERENCES public.departments(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 12. project_members (NEW)
-CREATE TABLE IF NOT EXISTS project_members (
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+-- 12. project_members
+CREATE TABLE IF NOT EXISTS public.project_members (
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   added_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (project_id, profile_id)
 );
 
--- 13. tasks (NEW - manual tasks, distinct from task_instances)
-CREATE TABLE IF NOT EXISTS tasks (
+-- 13. tasks (manual tasks, distinct from task_instances)
+CREATE TABLE IF NOT EXISTS public.tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done')),
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   due_date DATE,
-  department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-  created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  assignee_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  department_id UUID NOT NULL REFERENCES public.departments(id) ON DELETE CASCADE,
+  project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  assignee_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14. task_attachments (NEW)
-CREATE TABLE IF NOT EXISTS task_attachments (
+-- 14. task_attachments
+CREATE TABLE IF NOT EXISTS public.task_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
   file_path TEXT NOT NULL,
   file_name TEXT NOT NULL,
   file_size INT,
   content_type TEXT,
-  uploaded_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  uploaded_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 15. task_comments (NEW)
-CREATE TABLE IF NOT EXISTS task_comments (
+-- 15. task_comments
+CREATE TABLE IF NOT EXISTS public.task_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -210,30 +214,31 @@ CREATE TABLE IF NOT EXISTS task_comments (
 -- =============================================================================
 -- INDEXES
 -- =============================================================================
-CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
-CREATE INDEX IF NOT EXISTS idx_profiles_branch ON profiles(branch_id);
-CREATE INDEX IF NOT EXISTS idx_profiles_department ON profiles(department_id);
-CREATE INDEX IF NOT EXISTS idx_task_instances_assignee ON task_instances(assignee_profile_id);
-CREATE INDEX IF NOT EXISTS idx_task_instances_status ON task_instances(status);
-CREATE INDEX IF NOT EXISTS idx_task_instances_assignment_date ON task_instances(assignment_date);
-CREATE INDEX IF NOT EXISTS idx_task_instances_due_date ON task_instances(due_date);
-CREATE INDEX IF NOT EXISTS idx_user_points_profile ON user_points(profile_id);
-CREATE INDEX IF NOT EXISTS idx_user_points_month_year ON user_points(month, year);
-CREATE INDEX IF NOT EXISTS idx_projects_department ON projects(department_id);
-CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by);
-CREATE INDEX IF NOT EXISTS idx_project_members_profile ON project_members(profile_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_department ON tasks(department_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by);
-CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
-CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
-CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_branch ON public.profiles(branch_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_department ON public.profiles(department_id);
+CREATE INDEX IF NOT EXISTS idx_task_instances_assignee ON public.task_instances(assignee_profile_id);
+CREATE INDEX IF NOT EXISTS idx_task_instances_status ON public.task_instances(status);
+CREATE INDEX IF NOT EXISTS idx_task_instances_assignment_date ON public.task_instances(assignment_date);
+CREATE INDEX IF NOT EXISTS idx_task_instances_due_date ON public.task_instances(due_date);
+CREATE INDEX IF NOT EXISTS idx_user_points_profile ON public.user_points(profile_id);
+CREATE INDEX IF NOT EXISTS idx_user_points_month_year ON public.user_points(month, year);
+CREATE INDEX IF NOT EXISTS idx_projects_department ON public.projects(department_id);
+CREATE INDEX IF NOT EXISTS idx_projects_created_by ON public.projects(created_by);
+CREATE INDEX IF NOT EXISTS idx_project_members_profile ON public.project_members(profile_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_department ON public.tasks(department_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_project ON public.tasks(project_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON public.tasks(created_by);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON public.tasks(assignee_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON public.tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON public.task_attachments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_attachments_uploaded_by ON public.task_attachments(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_task_comments_task ON public.task_comments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_comments_author ON public.task_comments(author_id);
 
--- Unique constraint for task instances
 CREATE UNIQUE INDEX IF NOT EXISTS idx_task_instances_unique_assignment
-  ON task_instances (template_id, assignee_profile_id, assignment_date);
+  ON public.task_instances (template_id, assignee_profile_id, assignment_date);
 
 -- =============================================================================
 -- HELPER FUNCTIONS (PUBLIC - for legacy compatibility)
@@ -254,7 +259,7 @@ RETURNS UUID AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- =============================================================================
--- HELPER FUNCTIONS (PRIVATE - for new RLS)
+-- HELPER FUNCTIONS (PRIVATE - for new RLS, created AFTER tables exist)
 -- =============================================================================
 CREATE OR REPLACE FUNCTION private.get_user_role()
 RETURNS TEXT
@@ -274,6 +279,16 @@ STABLE
 SET search_path = ''
 AS $$
   SELECT department_id FROM public.profiles WHERE id = (SELECT auth.uid())
+$$;
+
+CREATE OR REPLACE FUNCTION private.get_profile_department_id(p_profile_id UUID)
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT department_id FROM public.profiles WHERE id = p_profile_id
 $$;
 
 CREATE OR REPLACE FUNCTION private.get_user_project_ids()
@@ -298,7 +313,6 @@ DECLARE
   v_user_role TEXT;
   v_user_dept UUID;
   v_task RECORD;
-  v_assignee_dept UUID;
 BEGIN
   v_user_id := (SELECT auth.uid());
   IF v_user_id IS NULL THEN
@@ -316,8 +330,12 @@ BEGIN
   INTO v_task
   FROM public.tasks WHERE id = p_task_id;
 
-  IF v_task IS NULL THEN
+  IF NOT FOUND THEN
     RETURN FALSE;
+  END IF;
+
+  IF v_user_role = 'pic' AND v_task.department_id = v_user_dept THEN
+    RETURN TRUE;
   END IF;
 
   IF v_task.project_id IS NOT NULL THEN
@@ -327,21 +345,8 @@ BEGIN
     );
   END IF;
 
-  IF v_task.assignee_id = v_user_id THEN
+  IF v_task.assignee_id = v_user_id OR v_task.created_by = v_user_id THEN
     RETURN TRUE;
-  END IF;
-
-  IF v_task.created_by = v_user_id THEN
-    RETURN TRUE;
-  END IF;
-
-  IF v_user_role IN ('admin', 'pic') THEN
-    SELECT department_id INTO v_assignee_dept
-    FROM public.profiles WHERE id = v_task.assignee_id;
-    
-    IF v_assignee_dept IS NOT NULL AND v_assignee_dept = v_user_dept THEN
-      RETURN TRUE;
-    END IF;
   END IF;
 
   RETURN FALSE;
@@ -373,11 +378,11 @@ BEGIN
 
   SELECT created_by, assignee_id INTO v_task FROM public.tasks WHERE id = p_task_id;
 
-  IF v_task.created_by = v_user_id THEN
-    RETURN TRUE;
+  IF NOT FOUND THEN
+    RETURN FALSE;
   END IF;
 
-  IF v_task.assignee_id = v_user_id THEN
+  IF v_task.created_by = v_user_id OR v_task.assignee_id = v_user_id THEN
     RETURN TRUE;
   END IF;
 
@@ -405,9 +410,14 @@ BEGIN
 END;
 $$;
 
--- Grant execute on private functions
+-- Revoke execute from public/anon on all private functions
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA private FROM public;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA private FROM anon;
+
+-- Grant execute to authenticated
 GRANT EXECUTE ON FUNCTION private.get_user_role() TO authenticated;
 GRANT EXECUTE ON FUNCTION private.get_user_department_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION private.get_profile_department_id(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION private.get_user_project_ids() TO authenticated;
 GRANT EXECUTE ON FUNCTION private.can_view_task(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION private.can_edit_task(UUID) TO authenticated;
@@ -416,8 +426,6 @@ GRANT EXECUTE ON FUNCTION private.can_access_task_file(TEXT) TO authenticated;
 -- =============================================================================
 -- TRIGGERS
 -- =============================================================================
-
--- Trigger for user_points month/year
 CREATE OR REPLACE FUNCTION task_app.set_user_points_month_year()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -427,40 +435,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS user_points_set_month_year ON user_points;
+DROP TRIGGER IF EXISTS user_points_set_month_year ON public.user_points;
 CREATE TRIGGER user_points_set_month_year
-  BEFORE INSERT OR UPDATE OF earned_at ON user_points
+  BEFORE INSERT OR UPDATE OF earned_at ON public.user_points
   FOR EACH ROW
   EXECUTE PROCEDURE task_app.set_user_points_month_year();
 
--- Trigger for updated_at
 CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-DROP TRIGGER IF EXISTS projects_updated_at ON projects;
+DROP TRIGGER IF EXISTS projects_updated_at ON public.projects;
 CREATE TRIGGER projects_updated_at
-  BEFORE UPDATE ON projects
+  BEFORE UPDATE ON public.projects
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
-DROP TRIGGER IF EXISTS tasks_updated_at ON tasks;
+DROP TRIGGER IF EXISTS tasks_updated_at ON public.tasks;
 CREATE TRIGGER tasks_updated_at
-  BEFORE UPDATE ON tasks
+  BEFORE UPDATE ON public.tasks
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
-DROP TRIGGER IF EXISTS task_comments_updated_at ON task_comments;
+DROP TRIGGER IF EXISTS task_comments_updated_at ON public.task_comments;
 CREATE TRIGGER task_comments_updated_at
-  BEFORE UPDATE ON task_comments
+  BEFORE UPDATE ON public.task_comments
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
--- Trigger for points and stats on task_instances
 CREATE OR REPLACE FUNCTION task_app.apply_task_points_and_stats()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -473,13 +482,13 @@ BEGIN
 
   IF NEW.status = 'verified' THEN
     evt := CASE WHEN NEW.is_late THEN 'completed_late' ELSE 'completed_on_time' END;
-    SELECT points INTO pts FROM point_settings WHERE event_type = evt LIMIT 1;
+    SELECT points INTO pts FROM public.point_settings WHERE event_type = evt LIMIT 1;
     IF pts IS NULL THEN pts := 0; END IF;
 
-    INSERT INTO user_points (profile_id, task_instance_id, event_type, points_earned)
+    INSERT INTO public.user_points (profile_id, task_instance_id, event_type, points_earned)
     VALUES (NEW.assignee_profile_id, NEW.id, evt, pts);
 
-    INSERT INTO task_user_stats (profile_id, total_completed, total_late_submissions, updated_at)
+    INSERT INTO public.task_user_stats (profile_id, total_completed, total_late_submissions, updated_at)
     VALUES (
       NEW.assignee_profile_id,
       1,
@@ -487,20 +496,20 @@ BEGIN
       now()
     )
     ON CONFLICT (profile_id) DO UPDATE SET
-      total_completed = task_user_stats.total_completed + 1,
-      total_late_submissions = task_user_stats.total_late_submissions + CASE WHEN NEW.is_late THEN 1 ELSE 0 END,
+      total_completed = public.task_user_stats.total_completed + 1,
+      total_late_submissions = public.task_user_stats.total_late_submissions + CASE WHEN NEW.is_late THEN 1 ELSE 0 END,
       updated_at = now();
   ELSIF NEW.status = 'failed' THEN
-    SELECT points INTO pts FROM point_settings WHERE event_type = 'failed' LIMIT 1;
+    SELECT points INTO pts FROM public.point_settings WHERE event_type = 'failed' LIMIT 1;
     IF pts IS NULL THEN pts := 0; END IF;
 
-    INSERT INTO user_points (profile_id, task_instance_id, event_type, points_earned)
+    INSERT INTO public.user_points (profile_id, task_instance_id, event_type, points_earned)
     VALUES (NEW.assignee_profile_id, NEW.id, 'failed', pts);
 
-    INSERT INTO task_user_stats (profile_id, total_failed, updated_at)
+    INSERT INTO public.task_user_stats (profile_id, total_failed, updated_at)
     VALUES (NEW.assignee_profile_id, 1, now())
     ON CONFLICT (profile_id) DO UPDATE SET
-      total_failed = task_user_stats.total_failed + 1,
+      total_failed = public.task_user_stats.total_failed + 1,
       updated_at = now();
   END IF;
 
@@ -508,148 +517,148 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS task_instances_points_trigger ON task_instances;
+DROP TRIGGER IF EXISTS task_instances_points_trigger ON public.task_instances;
 CREATE TRIGGER task_instances_points_trigger
-  AFTER UPDATE OF status ON task_instances
+  AFTER UPDATE OF status ON public.task_instances
   FOR EACH ROW
   EXECUTE PROCEDURE task_app.apply_task_points_and_stats();
 
 -- =============================================================================
 -- ROW LEVEL SECURITY: Enable on all tables
 -- =============================================================================
-ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_template_questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_instances ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_instance_answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_user_stats ENABLE ROW LEVEL SECURITY;
-ALTER TABLE point_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_points ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_attachments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_template_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_instances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_instance_answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_user_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.point_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_points ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- RLS POLICIES: Drop existing and recreate (idempotent)
+-- RLS POLICIES: Legacy tables (001-004)
 -- =============================================================================
 
 -- branches
-DROP POLICY IF EXISTS "branches_select" ON branches;
-DROP POLICY IF EXISTS "branches_insert_admin" ON branches;
-DROP POLICY IF EXISTS "branches_update_admin" ON branches;
-DROP POLICY IF EXISTS "branches_delete_admin" ON branches;
+DROP POLICY IF EXISTS "branches_select" ON public.branches;
+DROP POLICY IF EXISTS "branches_insert_admin" ON public.branches;
+DROP POLICY IF EXISTS "branches_update_admin" ON public.branches;
+DROP POLICY IF EXISTS "branches_delete_admin" ON public.branches;
 
-CREATE POLICY "branches_select" ON branches FOR SELECT TO authenticated USING (true);
-CREATE POLICY "branches_insert_admin" ON branches FOR INSERT TO authenticated
+CREATE POLICY "branches_select" ON public.branches FOR SELECT TO authenticated USING (true);
+CREATE POLICY "branches_insert_admin" ON public.branches FOR INSERT TO authenticated
   WITH CHECK (public.user_role() = 'admin');
-CREATE POLICY "branches_update_admin" ON branches FOR UPDATE TO authenticated
+CREATE POLICY "branches_update_admin" ON public.branches FOR UPDATE TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
-CREATE POLICY "branches_delete_admin" ON branches FOR DELETE TO authenticated
+CREATE POLICY "branches_delete_admin" ON public.branches FOR DELETE TO authenticated
   USING (public.user_role() = 'admin');
 
 -- departments
-DROP POLICY IF EXISTS "departments_select" ON departments;
-DROP POLICY IF EXISTS "departments_insert_admin" ON departments;
-DROP POLICY IF EXISTS "departments_update_admin" ON departments;
-DROP POLICY IF EXISTS "departments_delete_admin" ON departments;
+DROP POLICY IF EXISTS "departments_select" ON public.departments;
+DROP POLICY IF EXISTS "departments_insert_admin" ON public.departments;
+DROP POLICY IF EXISTS "departments_update_admin" ON public.departments;
+DROP POLICY IF EXISTS "departments_delete_admin" ON public.departments;
 
-CREATE POLICY "departments_select" ON departments FOR SELECT TO authenticated USING (true);
-CREATE POLICY "departments_insert_admin" ON departments FOR INSERT TO authenticated
+CREATE POLICY "departments_select" ON public.departments FOR SELECT TO authenticated USING (true);
+CREATE POLICY "departments_insert_admin" ON public.departments FOR INSERT TO authenticated
   WITH CHECK (public.user_role() = 'admin');
-CREATE POLICY "departments_update_admin" ON departments FOR UPDATE TO authenticated
+CREATE POLICY "departments_update_admin" ON public.departments FOR UPDATE TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
-CREATE POLICY "departments_delete_admin" ON departments FOR DELETE TO authenticated
+CREATE POLICY "departments_delete_admin" ON public.departments FOR DELETE TO authenticated
   USING (public.user_role() = 'admin');
 
 -- profiles
-DROP POLICY IF EXISTS "profiles_select_all" ON profiles;
-DROP POLICY IF EXISTS "profiles_admin_all" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
 
-CREATE POLICY "profiles_select_all" ON profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "profiles_admin_all" ON profiles FOR ALL TO authenticated
+CREATE POLICY "profiles_select_all" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "profiles_admin_all" ON public.profiles FOR ALL TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
 
 -- task_templates
-DROP POLICY IF EXISTS "task_templates_select" ON task_templates;
-DROP POLICY IF EXISTS "task_templates_insert" ON task_templates;
-DROP POLICY IF EXISTS "task_templates_update" ON task_templates;
-DROP POLICY IF EXISTS "task_templates_delete" ON task_templates;
+DROP POLICY IF EXISTS "task_templates_select" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_insert" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_update" ON public.task_templates;
+DROP POLICY IF EXISTS "task_templates_delete" ON public.task_templates;
 
-CREATE POLICY "task_templates_select" ON task_templates FOR SELECT TO authenticated USING (true);
-CREATE POLICY "task_templates_insert" ON task_templates FOR INSERT TO authenticated
+CREATE POLICY "task_templates_select" ON public.task_templates FOR SELECT TO authenticated USING (true);
+CREATE POLICY "task_templates_insert" ON public.task_templates FOR INSERT TO authenticated
   WITH CHECK (public.user_role() IN ('admin', 'pic'));
-CREATE POLICY "task_templates_update" ON task_templates FOR UPDATE TO authenticated
+CREATE POLICY "task_templates_update" ON public.task_templates FOR UPDATE TO authenticated
   USING (public.user_role() IN ('admin', 'pic'))
   WITH CHECK (public.user_role() IN ('admin', 'pic'));
-CREATE POLICY "task_templates_delete" ON task_templates FOR DELETE TO authenticated
+CREATE POLICY "task_templates_delete" ON public.task_templates FOR DELETE TO authenticated
   USING (public.user_role() = 'admin');
 
 -- task_template_questions
-DROP POLICY IF EXISTS "task_template_questions_select" ON task_template_questions;
-DROP POLICY IF EXISTS "task_template_questions_insert" ON task_template_questions;
-DROP POLICY IF EXISTS "task_template_questions_update" ON task_template_questions;
-DROP POLICY IF EXISTS "task_template_questions_delete" ON task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_select" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_insert" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_update" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_delete" ON public.task_template_questions;
 
-CREATE POLICY "task_template_questions_select" ON task_template_questions FOR SELECT TO authenticated USING (true);
-CREATE POLICY "task_template_questions_insert" ON task_template_questions FOR INSERT TO authenticated
+CREATE POLICY "task_template_questions_select" ON public.task_template_questions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "task_template_questions_insert" ON public.task_template_questions FOR INSERT TO authenticated
   WITH CHECK (public.user_role() IN ('admin', 'pic'));
-CREATE POLICY "task_template_questions_update" ON task_template_questions FOR UPDATE TO authenticated
+CREATE POLICY "task_template_questions_update" ON public.task_template_questions FOR UPDATE TO authenticated
   USING (public.user_role() IN ('admin', 'pic'))
   WITH CHECK (public.user_role() IN ('admin', 'pic'));
-CREATE POLICY "task_template_questions_delete" ON task_template_questions FOR DELETE TO authenticated
+CREATE POLICY "task_template_questions_delete" ON public.task_template_questions FOR DELETE TO authenticated
   USING (public.user_role() IN ('admin', 'pic'));
 
 -- task_instances
-DROP POLICY IF EXISTS "task_instances_select_staff" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_select_pic" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_select_admin" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_insert" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_update_staff" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_update_pic" ON task_instances;
-DROP POLICY IF EXISTS "task_instances_update_admin" ON task_instances;
+DROP POLICY IF EXISTS "task_instances_select_staff" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_select_pic" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_select_admin" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_insert" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_staff" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_pic" ON public.task_instances;
+DROP POLICY IF EXISTS "task_instances_update_admin" ON public.task_instances;
 
-CREATE POLICY "task_instances_select_staff" ON task_instances FOR SELECT TO authenticated
+CREATE POLICY "task_instances_select_staff" ON public.task_instances FOR SELECT TO authenticated
   USING (assignee_profile_id = auth.uid());
-CREATE POLICY "task_instances_select_pic" ON task_instances FOR SELECT TO authenticated
+CREATE POLICY "task_instances_select_pic" ON public.task_instances FOR SELECT TO authenticated
   USING (
     public.user_role() = 'pic' AND (
       EXISTS (
-        SELECT 1 FROM profiles p
+        SELECT 1 FROM public.profiles p
         WHERE p.id = task_instances.assignee_profile_id
           AND (p.branch_id = public.user_branch_id() OR p.department_id = public.user_department_id())
       )
     )
   );
-CREATE POLICY "task_instances_select_admin" ON task_instances FOR SELECT TO authenticated
+CREATE POLICY "task_instances_select_admin" ON public.task_instances FOR SELECT TO authenticated
   USING (public.user_role() = 'admin');
-CREATE POLICY "task_instances_insert" ON task_instances FOR INSERT TO authenticated
+CREATE POLICY "task_instances_insert" ON public.task_instances FOR INSERT TO authenticated
   WITH CHECK (public.user_role() IN ('admin', 'pic'));
-CREATE POLICY "task_instances_update_staff" ON task_instances FOR UPDATE TO authenticated
+CREATE POLICY "task_instances_update_staff" ON public.task_instances FOR UPDATE TO authenticated
   USING (assignee_profile_id = auth.uid())
   WITH CHECK (assignee_profile_id = auth.uid());
-CREATE POLICY "task_instances_update_pic" ON task_instances FOR UPDATE TO authenticated
+CREATE POLICY "task_instances_update_pic" ON public.task_instances FOR UPDATE TO authenticated
   USING (public.user_role() = 'pic')
   WITH CHECK (public.user_role() = 'pic');
-CREATE POLICY "task_instances_update_admin" ON task_instances FOR UPDATE TO authenticated
+CREATE POLICY "task_instances_update_admin" ON public.task_instances FOR UPDATE TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
 
 -- task_instance_answers
-DROP POLICY IF EXISTS "task_instance_answers_select" ON task_instance_answers;
-DROP POLICY IF EXISTS "task_instance_answers_insert" ON task_instance_answers;
-DROP POLICY IF EXISTS "task_instance_answers_update" ON task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_select" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_insert" ON public.task_instance_answers;
+DROP POLICY IF EXISTS "task_instance_answers_update" ON public.task_instance_answers;
 
-CREATE POLICY "task_instance_answers_select" ON task_instance_answers FOR SELECT TO authenticated
+CREATE POLICY "task_instance_answers_select" ON public.task_instance_answers FOR SELECT TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM task_instances ti
+      SELECT 1 FROM public.task_instances ti
       WHERE ti.id = task_instance_answers.task_instance_id
         AND (
           ti.assignee_profile_id = auth.uid()
@@ -657,66 +666,70 @@ CREATE POLICY "task_instance_answers_select" ON task_instance_answers FOR SELECT
         )
     )
   );
-CREATE POLICY "task_instance_answers_insert" ON task_instance_answers FOR INSERT TO authenticated
+CREATE POLICY "task_instance_answers_insert" ON public.task_instance_answers FOR INSERT TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM task_instances ti
+      SELECT 1 FROM public.task_instances ti
       WHERE ti.id = task_instance_answers.task_instance_id AND ti.assignee_profile_id = auth.uid()
     )
   );
-CREATE POLICY "task_instance_answers_update" ON task_instance_answers FOR UPDATE TO authenticated
+CREATE POLICY "task_instance_answers_update" ON public.task_instance_answers FOR UPDATE TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM task_instances ti
+      SELECT 1 FROM public.task_instances ti
       WHERE ti.id = task_instance_answers.task_instance_id AND ti.assignee_profile_id = auth.uid()
     )
   );
 
 -- task_user_stats
-DROP POLICY IF EXISTS "task_user_stats_select_own" ON task_user_stats;
-DROP POLICY IF EXISTS "task_user_stats_select_admin" ON task_user_stats;
-DROP POLICY IF EXISTS "task_user_stats_all_admin" ON task_user_stats;
+DROP POLICY IF EXISTS "task_user_stats_select_own" ON public.task_user_stats;
+DROP POLICY IF EXISTS "task_user_stats_select_admin" ON public.task_user_stats;
+DROP POLICY IF EXISTS "task_user_stats_all_admin" ON public.task_user_stats;
 
-CREATE POLICY "task_user_stats_select_own" ON task_user_stats FOR SELECT TO authenticated
+CREATE POLICY "task_user_stats_select_own" ON public.task_user_stats FOR SELECT TO authenticated
   USING (profile_id = auth.uid());
-CREATE POLICY "task_user_stats_select_admin" ON task_user_stats FOR SELECT TO authenticated
+CREATE POLICY "task_user_stats_select_admin" ON public.task_user_stats FOR SELECT TO authenticated
   USING (public.user_role() = 'admin');
-CREATE POLICY "task_user_stats_all_admin" ON task_user_stats FOR ALL TO authenticated
+CREATE POLICY "task_user_stats_all_admin" ON public.task_user_stats FOR ALL TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
 
 -- point_settings
-DROP POLICY IF EXISTS "point_settings_select" ON point_settings;
-DROP POLICY IF EXISTS "point_settings_admin" ON point_settings;
+DROP POLICY IF EXISTS "point_settings_select" ON public.point_settings;
+DROP POLICY IF EXISTS "point_settings_admin" ON public.point_settings;
 
-CREATE POLICY "point_settings_select" ON point_settings FOR SELECT TO authenticated USING (true);
-CREATE POLICY "point_settings_admin" ON point_settings FOR ALL TO authenticated
+CREATE POLICY "point_settings_select" ON public.point_settings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "point_settings_admin" ON public.point_settings FOR ALL TO authenticated
   USING (public.user_role() = 'admin')
   WITH CHECK (public.user_role() = 'admin');
 
 -- user_points
-DROP POLICY IF EXISTS "user_points_select" ON user_points;
+DROP POLICY IF EXISTS "user_points_select" ON public.user_points;
 
-CREATE POLICY "user_points_select" ON user_points FOR SELECT TO authenticated USING (true);
+CREATE POLICY "user_points_select" ON public.user_points FOR SELECT TO authenticated USING (true);
+
+-- =============================================================================
+-- RLS POLICIES: New tables (005 - Project Management)
+-- =============================================================================
 
 -- projects
-DROP POLICY IF EXISTS "projects_admin_select" ON projects;
-DROP POLICY IF EXISTS "projects_manager_select" ON projects;
-DROP POLICY IF EXISTS "projects_member_select" ON projects;
-DROP POLICY IF EXISTS "projects_insert" ON projects;
-DROP POLICY IF EXISTS "projects_update" ON projects;
-DROP POLICY IF EXISTS "projects_delete" ON projects;
+DROP POLICY IF EXISTS "projects_admin_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_manager_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_member_select" ON public.projects;
+DROP POLICY IF EXISTS "projects_insert" ON public.projects;
+DROP POLICY IF EXISTS "projects_update" ON public.projects;
+DROP POLICY IF EXISTS "projects_delete" ON public.projects;
 
-CREATE POLICY "projects_admin_select" ON projects FOR SELECT TO authenticated
+CREATE POLICY "projects_admin_select" ON public.projects FOR SELECT TO authenticated
   USING ((SELECT private.get_user_role()) = 'admin');
-CREATE POLICY "projects_manager_select" ON projects FOR SELECT TO authenticated
+CREATE POLICY "projects_manager_select" ON public.projects FOR SELECT TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'pic'
     AND department_id = (SELECT private.get_user_department_id())
   );
-CREATE POLICY "projects_member_select" ON projects FOR SELECT TO authenticated
+CREATE POLICY "projects_member_select" ON public.projects FOR SELECT TO authenticated
   USING (id IN (SELECT private.get_user_project_ids()));
-CREATE POLICY "projects_insert" ON projects FOR INSERT TO authenticated
+CREATE POLICY "projects_insert" ON public.projects FOR INSERT TO authenticated
   WITH CHECK (
     (SELECT private.get_user_role()) IN ('admin', 'pic')
     AND (
@@ -724,7 +737,7 @@ CREATE POLICY "projects_insert" ON projects FOR INSERT TO authenticated
       OR department_id = (SELECT private.get_user_department_id())
     )
   );
-CREATE POLICY "projects_update" ON projects FOR UPDATE TO authenticated
+CREATE POLICY "projects_update" ON public.projects FOR UPDATE TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
     OR created_by = (SELECT auth.uid())
@@ -733,56 +746,68 @@ CREATE POLICY "projects_update" ON projects FOR UPDATE TO authenticated
     (SELECT private.get_user_role()) = 'admin'
     OR created_by = (SELECT auth.uid())
   );
-CREATE POLICY "projects_delete" ON projects FOR DELETE TO authenticated
+CREATE POLICY "projects_delete" ON public.projects FOR DELETE TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
     OR created_by = (SELECT auth.uid())
   );
 
 -- project_members
-DROP POLICY IF EXISTS "project_members_select" ON project_members;
-DROP POLICY IF EXISTS "project_members_insert" ON project_members;
-DROP POLICY IF EXISTS "project_members_delete" ON project_members;
+DROP POLICY IF EXISTS "project_members_select" ON public.project_members;
+DROP POLICY IF EXISTS "project_members_insert" ON public.project_members;
+DROP POLICY IF EXISTS "project_members_delete" ON public.project_members;
 
-CREATE POLICY "project_members_select" ON project_members FOR SELECT TO authenticated
+CREATE POLICY "project_members_select" ON public.project_members FOR SELECT TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
     OR project_id IN (SELECT private.get_user_project_ids())
     OR EXISTS (
-      SELECT 1 FROM projects p
+      SELECT 1 FROM public.projects p
       WHERE p.id = project_members.project_id
       AND p.department_id = (SELECT private.get_user_department_id())
       AND (SELECT private.get_user_role()) = 'pic'
     )
   );
-CREATE POLICY "project_members_insert" ON project_members FOR INSERT TO authenticated
+CREATE POLICY "project_members_insert" ON public.project_members FOR INSERT TO authenticated
   WITH CHECK (
     (SELECT private.get_user_role()) = 'admin'
     OR EXISTS (
-      SELECT 1 FROM projects p
+      SELECT 1 FROM public.projects p
       WHERE p.id = project_members.project_id
       AND p.created_by = (SELECT auth.uid())
     )
   );
-CREATE POLICY "project_members_delete" ON project_members FOR DELETE TO authenticated
+CREATE POLICY "project_members_delete" ON public.project_members FOR DELETE TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
     OR EXISTS (
-      SELECT 1 FROM projects p
+      SELECT 1 FROM public.projects p
       WHERE p.id = project_members.project_id
       AND p.created_by = (SELECT auth.uid())
     )
   );
 
 -- tasks
-DROP POLICY IF EXISTS "tasks_select" ON tasks;
-DROP POLICY IF EXISTS "tasks_insert" ON tasks;
-DROP POLICY IF EXISTS "tasks_update" ON tasks;
-DROP POLICY IF EXISTS "tasks_delete" ON tasks;
+DROP POLICY IF EXISTS "tasks_select" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_update" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
 
-CREATE POLICY "tasks_select" ON tasks FOR SELECT TO authenticated
-  USING ((SELECT private.can_view_task(id)));
-CREATE POLICY "tasks_insert" ON tasks FOR INSERT TO authenticated
+CREATE POLICY "tasks_select" ON public.tasks FOR SELECT TO authenticated
+  USING (
+    (SELECT private.get_user_role()) = 'admin'
+    OR (
+      (SELECT private.get_user_role()) = 'pic'
+      AND department_id = (SELECT private.get_user_department_id())
+    )
+    OR (
+      project_id IS NOT NULL
+      AND project_id IN (SELECT private.get_user_project_ids())
+    )
+    OR assignee_id = (SELECT auth.uid())
+    OR created_by = (SELECT auth.uid())
+  );
+CREATE POLICY "tasks_insert" ON public.tasks FOR INSERT TO authenticated
   WITH CHECK (
     (SELECT private.get_user_role()) IN ('admin', 'pic')
     AND (
@@ -791,60 +816,79 @@ CREATE POLICY "tasks_insert" ON tasks FOR INSERT TO authenticated
     )
     AND created_by = (SELECT auth.uid())
   );
-CREATE POLICY "tasks_update" ON tasks FOR UPDATE TO authenticated
-  USING ((SELECT private.can_edit_task(id)))
-  WITH CHECK ((SELECT private.can_edit_task(id)));
-CREATE POLICY "tasks_delete" ON tasks FOR DELETE TO authenticated
+CREATE POLICY "tasks_update" ON public.tasks FOR UPDATE TO authenticated
+  USING (
+    (SELECT private.get_user_role()) = 'admin'
+    OR created_by = (SELECT auth.uid())
+    OR assignee_id = (SELECT auth.uid())
+  )
+  WITH CHECK (
+    (SELECT private.get_user_role()) = 'admin'
+    OR created_by = (SELECT auth.uid())
+    OR assignee_id = (SELECT auth.uid())
+  );
+CREATE POLICY "tasks_delete" ON public.tasks FOR DELETE TO authenticated
   USING (
     (SELECT private.get_user_role()) = 'admin'
     OR created_by = (SELECT auth.uid())
   );
 
 -- task_attachments
-DROP POLICY IF EXISTS "task_attachments_select" ON task_attachments;
-DROP POLICY IF EXISTS "task_attachments_insert" ON task_attachments;
-DROP POLICY IF EXISTS "task_attachments_delete" ON task_attachments;
+DROP POLICY IF EXISTS "task_attachments_select" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_insert" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_delete" ON public.task_attachments;
 
-CREATE POLICY "task_attachments_select" ON task_attachments FOR SELECT TO authenticated
+CREATE POLICY "task_attachments_select" ON public.task_attachments FOR SELECT TO authenticated
   USING ((SELECT private.can_view_task(task_id)));
-CREATE POLICY "task_attachments_insert" ON task_attachments FOR INSERT TO authenticated
+CREATE POLICY "task_attachments_insert" ON public.task_attachments FOR INSERT TO authenticated
   WITH CHECK (
     (SELECT private.can_view_task(task_id))
     AND uploaded_by = (SELECT auth.uid())
   );
-CREATE POLICY "task_attachments_delete" ON task_attachments FOR DELETE TO authenticated
+CREATE POLICY "task_attachments_delete" ON public.task_attachments FOR DELETE TO authenticated
   USING (
     uploaded_by = (SELECT auth.uid())
     OR (SELECT private.get_user_role()) = 'admin'
   );
 
 -- task_comments
-DROP POLICY IF EXISTS "task_comments_select" ON task_comments;
-DROP POLICY IF EXISTS "task_comments_insert" ON task_comments;
-DROP POLICY IF EXISTS "task_comments_update" ON task_comments;
-DROP POLICY IF EXISTS "task_comments_delete" ON task_comments;
+DROP POLICY IF EXISTS "task_comments_select" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_insert" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_update" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_delete" ON public.task_comments;
 
-CREATE POLICY "task_comments_select" ON task_comments FOR SELECT TO authenticated
+CREATE POLICY "task_comments_select" ON public.task_comments FOR SELECT TO authenticated
   USING ((SELECT private.can_view_task(task_id)));
-CREATE POLICY "task_comments_insert" ON task_comments FOR INSERT TO authenticated
+CREATE POLICY "task_comments_insert" ON public.task_comments FOR INSERT TO authenticated
   WITH CHECK (
     (SELECT private.can_view_task(task_id))
     AND author_id = (SELECT auth.uid())
   );
-CREATE POLICY "task_comments_update" ON task_comments FOR UPDATE TO authenticated
+CREATE POLICY "task_comments_update" ON public.task_comments FOR UPDATE TO authenticated
   USING (author_id = (SELECT auth.uid()))
   WITH CHECK (author_id = (SELECT auth.uid()));
-CREATE POLICY "task_comments_delete" ON task_comments FOR DELETE TO authenticated
+CREATE POLICY "task_comments_delete" ON public.task_comments FOR DELETE TO authenticated
   USING (
     author_id = (SELECT auth.uid())
     OR (SELECT private.get_user_role()) = 'admin'
   );
 
 -- =============================================================================
+-- STORAGE BUCKETS (created via SQL)
+-- =============================================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('task-files', 'task-files', false, 10485760)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('task-attachments', 'task-attachments', false, 10485760)
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
 -- STORAGE POLICIES
 -- =============================================================================
 
--- Legacy task-files bucket (for task_instance_answers)
+-- Legacy task-files bucket
 DROP POLICY IF EXISTS "task_files_upload" ON storage.objects;
 DROP POLICY IF EXISTS "task_files_select_own" ON storage.objects;
 DROP POLICY IF EXISTS "task_files_update_own" ON storage.objects;
@@ -863,13 +907,13 @@ USING (
 );
 
 CREATE POLICY "task_files_update_own" ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'task-files' AND owner = auth.uid())
-WITH CHECK (bucket_id = 'task-files' AND owner = auth.uid());
+USING (bucket_id = 'task-files' AND owner_id = auth.uid()::text)
+WITH CHECK (bucket_id = 'task-files' AND owner_id = auth.uid()::text);
 
 CREATE POLICY "task_files_delete_own" ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id = 'task-files' AND owner = auth.uid());
+USING (bucket_id = 'task-files' AND owner_id = auth.uid()::text);
 
--- New task-attachments bucket (for new tasks)
+-- New task-attachments bucket
 DROP POLICY IF EXISTS "task_attachments_storage_select" ON storage.objects;
 DROP POLICY IF EXISTS "task_attachments_storage_insert" ON storage.objects;
 DROP POLICY IF EXISTS "task_attachments_storage_delete" ON storage.objects;
@@ -893,7 +937,7 @@ FOR DELETE TO authenticated
 USING (
   bucket_id = 'task-attachments'
   AND (
-    owner = (SELECT auth.uid())
+    owner_id = (SELECT auth.uid())::text
     OR (SELECT private.get_user_role()) = 'admin'
   )
 );
@@ -901,7 +945,7 @@ USING (
 -- =============================================================================
 -- SEED DATA: point_settings (if not exists)
 -- =============================================================================
-INSERT INTO point_settings (event_type, points)
+INSERT INTO public.point_settings (event_type, points)
 VALUES
   ('completed_on_time', 10),
   ('completed_late', 5),
@@ -925,7 +969,7 @@ BEGIN
 
   FOR t IN
     SELECT tt.id AS template_id, tt.assign_to_type, tt.assign_to_id
-    FROM task_templates tt
+    FROM public.task_templates tt
     WHERE tt.is_active = true
       AND (tt.start_date IS NULL OR tt.start_date <= today_date)
       AND (tt.end_date IS NULL OR tt.end_date >= today_date)
@@ -941,16 +985,16 @@ BEGIN
     IF t.assign_to_type = 'user' AND t.assign_to_id IS NOT NULL THEN
       assignee_ids := array_append(assignee_ids, t.assign_to_id);
     ELSIF t.assign_to_type = 'branch' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE branch_id = t.assign_to_id AND role = 'staff';
+      SELECT array_agg(id) INTO assignee_ids FROM public.profiles WHERE branch_id = t.assign_to_id AND role = 'staff';
     ELSIF t.assign_to_type = 'department' AND t.assign_to_id IS NOT NULL THEN
-      SELECT array_agg(id) INTO assignee_ids FROM profiles WHERE department_id = t.assign_to_id AND role = 'staff';
+      SELECT array_agg(id) INTO assignee_ids FROM public.profiles WHERE department_id = t.assign_to_id AND role = 'staff';
     END IF;
 
     IF assignee_ids IS NULL THEN assignee_ids := ARRAY[]::UUID[]; END IF;
 
     FOREACH aid IN ARRAY assignee_ids
     LOOP
-      INSERT INTO task_instances (template_id, assignee_profile_id, assignment_date, due_date, status)
+      INSERT INTO public.task_instances (template_id, assignee_profile_id, assignment_date, due_date, status)
       VALUES (t.template_id, aid, today_date, due_ts, 'pending')
       ON CONFLICT DO NOTHING;
     END LOOP;
@@ -962,7 +1006,5 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- SELECT cron.schedule('generate-daily-tasks', '1 0 * * *', 'SELECT task_app.generate_daily_tasks()');
 
 -- =============================================================================
--- DONE! Remember to create storage buckets in the Dashboard:
--- 1. 'task-files' (private, 10MB limit)
--- 2. 'task-attachments' (private, 10MB limit)
+-- DONE!
 -- =============================================================================

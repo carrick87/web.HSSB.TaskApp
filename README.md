@@ -58,14 +58,14 @@ Internal task and project management web application built with Next.js 14 and S
 
 To test with sample accounts, run `supabase/seed_demo.sql` in the SQL Editor.
 
-**Demo Credentials:**
+**Demo Credentials (login with username):**
 
-| Role    | Email                        | Password   |
-|---------|------------------------------|------------|
-| Admin   | admin@demo.taskapp.local     | Demo1234!  |
-| Manager | manager@demo.taskapp.local   | Demo1234!  |
-| Member  | member1@demo.taskapp.local   | Demo1234!  |
-| Member  | member2@demo.taskapp.local   | Demo1234!  |
+| Role    | Username      | Password   |
+|---------|---------------|------------|
+| Admin   | demo_admin    | Demo1234!  |
+| Manager | demo_manager  | Demo1234!  |
+| Member  | demo_member1  | Demo1234!  |
+| Member  | demo_member2  | Demo1234!  |
 
 The seed creates a department, a project (with Manager + Member1), and 4 tasks demonstrating visibility rules. See `docs/TEST_PLAN.md` for expected behavior.
 

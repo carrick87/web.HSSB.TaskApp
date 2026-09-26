@@ -4,14 +4,16 @@ This document describes how to verify that the Row Level Security (RLS) policies
 
 ## Demo Accounts
 
-After running `seed_demo.sql`, you'll have these test accounts:
+After running `seed_demo.sql`, you'll have these test accounts.
 
-| Role    | Username      | Email                        | Password   |
-|---------|---------------|------------------------------|------------|
-| Admin   | demo_admin    | admin@demo.taskapp.local     | Demo1234!  |
-| Manager | demo_manager  | manager@demo.taskapp.local   | Demo1234!  |
-| Member  | demo_member1  | member1@demo.taskapp.local   | Demo1234!  |
-| Member  | demo_member2  | member2@demo.taskapp.local   | Demo1234!  |
+**Login with USERNAME (not email):**
+
+| Role    | Username      | Password   |
+|---------|---------------|------------|
+| Admin   | demo_admin    | Demo1234!  |
+| Manager | demo_manager  | Demo1234!  |
+| Member  | demo_member1  | Demo1234!  |
+| Member  | demo_member2  | Demo1234!  |
 
 ## Test Data Setup
 

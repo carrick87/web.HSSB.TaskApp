@@ -4,14 +4,13 @@
 -- Run this AFTER setup.sql to create demo accounts and sample data.
 -- This script creates users directly in auth.users (works in SQL Editor).
 --
--- DEMO CREDENTIALS:
---   Admin:    admin@demo.taskapp.local    / Demo1234!
---   Manager:  manager@demo.taskapp.local  / Demo1234!
---   Member 1: member1@demo.taskapp.local  / Demo1234!
---   Member 2: member2@demo.taskapp.local  / Demo1234!
+-- DEMO CREDENTIALS (login with username):
+--   Admin:    demo_admin     / Demo1234!
+--   Manager:  demo_manager   / Demo1234!
+--   Member 1: demo_member1   / Demo1234!
+--   Member 2: demo_member2   / Demo1234!
 -- =============================================================================
 
--- Generate deterministic UUIDs for reproducibility
 DO $$
 DECLARE
   v_branch_id UUID := 'a0000000-0000-0000-0000-000000000001'::UUID;
@@ -20,25 +19,26 @@ DECLARE
   v_manager_id UUID := '20000000-0000-0000-0000-000000000001'::UUID;
   v_member1_id UUID := '30000000-0000-0000-0000-000000000001'::UUID;
   v_member2_id UUID := '40000000-0000-0000-0000-000000000001'::UUID;
-  v_project_id UUID := 'p0000000-0000-0000-0000-000000000001'::UUID;
-  v_task_private1_id UUID := 't0000000-0000-0000-0000-000000000001'::UUID;
-  v_task_private2_id UUID := 't0000000-0000-0000-0000-000000000002'::UUID;
-  v_task_project1_id UUID := 't0000000-0000-0000-0000-000000000003'::UUID;
-  v_task_project2_id UUID := 't0000000-0000-0000-0000-000000000004'::UUID;
+  v_project_id UUID := 'e0000000-0000-0000-0000-000000000001'::UUID;
+  v_task_private1_id UUID := 'f0000000-0000-0000-0000-000000000001'::UUID;
+  v_task_private2_id UUID := 'f0000000-0000-0000-0000-000000000002'::UUID;
+  v_task_project1_id UUID := 'f0000000-0000-0000-0000-000000000003'::UUID;
+  v_task_project2_id UUID := 'f0000000-0000-0000-0000-000000000004'::UUID;
+  v_comment1_id UUID := 'c0000000-0000-0000-0000-000000000001'::UUID;
+  v_comment2_id UUID := 'c0000000-0000-0000-0000-000000000002'::UUID;
   v_password_hash TEXT;
 BEGIN
   -- Hash for "Demo1234!" using crypt with bf algorithm
-  -- Supabase uses bcrypt, this is a pre-computed hash for "Demo1234!"
-  v_password_hash := crypt('Demo1234!', gen_salt('bf'));
+  v_password_hash := extensions.crypt('Demo1234!', extensions.gen_salt('bf'));
 
   -- ==========================================================================
   -- 1. CREATE BRANCH AND DEPARTMENT
   -- ==========================================================================
-  INSERT INTO branches (id, name)
+  INSERT INTO public.branches (id, name)
   VALUES (v_branch_id, 'Demo Branch')
   ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
-  INSERT INTO departments (id, branch_id, name)
+  INSERT INTO public.departments (id, branch_id, name)
   VALUES (v_dept_id, v_branch_id, 'Demo Department')
   ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
@@ -59,7 +59,13 @@ BEGIN
     created_at,
     updated_at,
     confirmation_token,
-    recovery_token
+    recovery_token,
+    email_change,
+    email_change_token_new,
+    email_change_token_current,
+    phone_change,
+    phone_change_token,
+    reauthentication_token
   ) VALUES (
     v_admin_id,
     '00000000-0000-0000-0000-000000000000',
@@ -73,11 +79,17 @@ BEGIN
     now(),
     now(),
     '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     ''
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    encrypted_password = v_password_hash,
+    encrypted_password = extensions.crypt('Demo1234!', extensions.gen_salt('bf')),
     updated_at = now();
 
   -- Manager user
@@ -94,7 +106,13 @@ BEGIN
     created_at,
     updated_at,
     confirmation_token,
-    recovery_token
+    recovery_token,
+    email_change,
+    email_change_token_new,
+    email_change_token_current,
+    phone_change,
+    phone_change_token,
+    reauthentication_token
   ) VALUES (
     v_manager_id,
     '00000000-0000-0000-0000-000000000000',
@@ -108,11 +126,17 @@ BEGIN
     now(),
     now(),
     '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     ''
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    encrypted_password = v_password_hash,
+    encrypted_password = extensions.crypt('Demo1234!', extensions.gen_salt('bf')),
     updated_at = now();
 
   -- Member 1
@@ -129,7 +153,13 @@ BEGIN
     created_at,
     updated_at,
     confirmation_token,
-    recovery_token
+    recovery_token,
+    email_change,
+    email_change_token_new,
+    email_change_token_current,
+    phone_change,
+    phone_change_token,
+    reauthentication_token
   ) VALUES (
     v_member1_id,
     '00000000-0000-0000-0000-000000000000',
@@ -143,11 +173,17 @@ BEGIN
     now(),
     now(),
     '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     ''
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    encrypted_password = v_password_hash,
+    encrypted_password = extensions.crypt('Demo1234!', extensions.gen_salt('bf')),
     updated_at = now();
 
   -- Member 2
@@ -164,7 +200,13 @@ BEGIN
     created_at,
     updated_at,
     confirmation_token,
-    recovery_token
+    recovery_token,
+    email_change,
+    email_change_token_new,
+    email_change_token_current,
+    phone_change,
+    phone_change_token,
+    reauthentication_token
   ) VALUES (
     v_member2_id,
     '00000000-0000-0000-0000-000000000000',
@@ -178,11 +220,17 @@ BEGIN
     now(),
     now(),
     '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     ''
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    encrypted_password = v_password_hash,
+    encrypted_password = extensions.crypt('Demo1234!', extensions.gen_salt('bf')),
     updated_at = now();
 
   -- ==========================================================================
@@ -201,7 +249,7 @@ BEGIN
   (
     v_admin_id,
     v_admin_id,
-    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@demo.taskapp.local'),
+    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@demo.taskapp.local', 'email_verified', true),
     'email',
     v_admin_id::text,
     now(),
@@ -211,7 +259,7 @@ BEGIN
   (
     v_manager_id,
     v_manager_id,
-    jsonb_build_object('sub', v_manager_id::text, 'email', 'manager@demo.taskapp.local'),
+    jsonb_build_object('sub', v_manager_id::text, 'email', 'manager@demo.taskapp.local', 'email_verified', true),
     'email',
     v_manager_id::text,
     now(),
@@ -221,7 +269,7 @@ BEGIN
   (
     v_member1_id,
     v_member1_id,
-    jsonb_build_object('sub', v_member1_id::text, 'email', 'member1@demo.taskapp.local'),
+    jsonb_build_object('sub', v_member1_id::text, 'email', 'member1@demo.taskapp.local', 'email_verified', true),
     'email',
     v_member1_id::text,
     now(),
@@ -231,21 +279,21 @@ BEGIN
   (
     v_member2_id,
     v_member2_id,
-    jsonb_build_object('sub', v_member2_id::text, 'email', 'member2@demo.taskapp.local'),
+    jsonb_build_object('sub', v_member2_id::text, 'email', 'member2@demo.taskapp.local', 'email_verified', true),
     'email',
     v_member2_id::text,
     now(),
     now(),
     now()
   )
-  ON CONFLICT (provider, provider_id) DO UPDATE SET
+  ON CONFLICT (provider_id, provider) DO UPDATE SET
     identity_data = EXCLUDED.identity_data,
     updated_at = now();
 
   -- ==========================================================================
   -- 4. CREATE PROFILES
   -- ==========================================================================
-  INSERT INTO profiles (id, username, auth_email, branch_id, department_id, role)
+  INSERT INTO public.profiles (id, username, auth_email, branch_id, department_id, role)
   VALUES
     (v_admin_id, 'demo_admin', 'admin@demo.taskapp.local', v_branch_id, v_dept_id, 'admin'),
     (v_manager_id, 'demo_manager', 'manager@demo.taskapp.local', v_branch_id, v_dept_id, 'pic'),
@@ -261,7 +309,7 @@ BEGIN
   -- ==========================================================================
   -- 5. CREATE A PROJECT (visible to project members)
   -- ==========================================================================
-  INSERT INTO projects (id, name, description, department_id, created_by)
+  INSERT INTO public.projects (id, name, description, department_id, created_by)
   VALUES (
     v_project_id,
     'Demo Project',
@@ -274,7 +322,7 @@ BEGIN
     description = EXCLUDED.description;
 
   -- Add members to project (manager and member1, but NOT member2)
-  INSERT INTO project_members (project_id, profile_id)
+  INSERT INTO public.project_members (project_id, profile_id)
   VALUES
     (v_project_id, v_manager_id),
     (v_project_id, v_member1_id)
@@ -284,7 +332,7 @@ BEGIN
   -- 6. CREATE PRIVATE TASKS (only visible to assignee + manager + admins)
   -- ==========================================================================
   -- Private task for member1 (member2 should NOT see this)
-  INSERT INTO tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
+  INSERT INTO public.tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
   VALUES (
     v_task_private1_id,
     'Private Task for Member 1',
@@ -293,7 +341,7 @@ BEGIN
     'high',
     CURRENT_DATE + INTERVAL '3 days',
     v_dept_id,
-    NULL, -- No project = private task
+    NULL,
     v_manager_id,
     v_member1_id
   )
@@ -302,7 +350,7 @@ BEGIN
     description = EXCLUDED.description;
 
   -- Private task for member2 (member1 should NOT see this)
-  INSERT INTO tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
+  INSERT INTO public.tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
   VALUES (
     v_task_private2_id,
     'Private Task for Member 2',
@@ -311,7 +359,7 @@ BEGIN
     'medium',
     CURRENT_DATE + INTERVAL '5 days',
     v_dept_id,
-    NULL, -- No project = private task
+    NULL,
     v_manager_id,
     v_member2_id
   )
@@ -322,8 +370,7 @@ BEGIN
   -- ==========================================================================
   -- 7. CREATE PROJECT TASKS (visible to all project members)
   -- ==========================================================================
-  -- Project task 1 - assigned to member1, visible to all project members
-  INSERT INTO tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
+  INSERT INTO public.tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
   VALUES (
     v_task_project1_id,
     'Project Task: Design Review',
@@ -340,8 +387,7 @@ BEGIN
     title = EXCLUDED.title,
     description = EXCLUDED.description;
 
-  -- Project task 2 - also in project, assigned to member1
-  INSERT INTO tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
+  INSERT INTO public.tasks (id, title, description, status, priority, due_date, department_id, project_id, created_by, assignee_id)
   VALUES (
     v_task_project2_id,
     'Project Task: Implementation',
@@ -359,13 +405,14 @@ BEGIN
     description = EXCLUDED.description;
 
   -- ==========================================================================
-  -- 8. ADD SOME COMMENTS (optional demo data)
+  -- 8. ADD SOME COMMENTS (with fixed IDs so re-run doesn't duplicate)
   -- ==========================================================================
-  INSERT INTO task_comments (task_id, author_id, content)
+  INSERT INTO public.task_comments (id, task_id, author_id, content)
   VALUES
-    (v_task_project1_id, v_manager_id, 'Please complete this by end of week.'),
-    (v_task_project1_id, v_member1_id, 'Working on it, will update soon.')
-  ON CONFLICT DO NOTHING;
+    (v_comment1_id, v_task_project1_id, v_manager_id, 'Please complete this by end of week.'),
+    (v_comment2_id, v_task_project1_id, v_member1_id, 'Working on it, will update soon.')
+  ON CONFLICT (id) DO UPDATE SET
+    content = EXCLUDED.content;
 
 END $$;
 
@@ -377,20 +424,20 @@ END $$;
 SELECT 'auth.users' as table_name, email, id FROM auth.users WHERE email LIKE '%demo.taskapp.local' ORDER BY email;
 
 -- Check profiles
-SELECT 'profiles' as table_name, username, role, auth_email FROM profiles WHERE auth_email LIKE '%demo.taskapp.local' ORDER BY role;
+SELECT 'profiles' as table_name, username, role, auth_email FROM public.profiles WHERE auth_email LIKE '%demo.taskapp.local' ORDER BY role;
 
 -- Check project and members
 SELECT 'projects' as table_name, p.name, COUNT(pm.profile_id) as member_count
-FROM projects p
-LEFT JOIN project_members pm ON pm.project_id = p.id
+FROM public.projects p
+LEFT JOIN public.project_members pm ON pm.project_id = p.id
 WHERE p.name = 'Demo Project'
 GROUP BY p.id, p.name;
 
 -- Check tasks
 SELECT 'tasks' as table_name, title, 
   CASE WHEN project_id IS NULL THEN 'PRIVATE' ELSE 'PROJECT' END as visibility,
-  (SELECT username FROM profiles WHERE id = tasks.assignee_id) as assignee
-FROM tasks
+  (SELECT username FROM public.profiles WHERE id = tasks.assignee_id) as assignee
+FROM public.tasks
 ORDER BY project_id NULLS FIRST;
 
 -- =============================================================================

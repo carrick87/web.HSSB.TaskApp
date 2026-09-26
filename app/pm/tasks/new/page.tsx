@@ -2,9 +2,10 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createTask } from "@/lib/tasks-v2";
-import { getProjects, getDepartmentMembers } from "@/lib/projects";
+import { getProjects } from "@/lib/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { TaskNewForm } from "@/components/pm/TaskNewForm";
+import type { Profile } from "@/types/database.types";
 
 export default async function NewTaskPage({
   searchParams,
@@ -13,7 +14,7 @@ export default async function NewTaskPage({
 }) {
   const { project: projectId } = await searchParams;
   const profile = await requireRole(["admin", "pic"]);
-  
+
   const supabase = await createClient();
   const { data: departments } = await supabase
     .from("departments")
@@ -21,17 +22,16 @@ export default async function NewTaskPage({
     .order("name");
 
   const projects = await getProjects();
-  
-  const departmentId = profile.department_id;
-  let members: Awaited<ReturnType<typeof getDepartmentMembers>> = [];
-  if (departmentId) {
-    members = await getDepartmentMembers(departmentId);
-  }
+
+  const { data: allMembers } = await supabase
+    .from("profiles")
+    .select("id, username, role, department_id")
+    .order("username");
 
   async function handleCreate(formData: FormData) {
     "use server";
     const profile = await requireRole(["admin", "pic"]);
-    
+
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const status = formData.get("status") as "todo" | "in_progress" | "done";
@@ -76,143 +76,15 @@ export default async function NewTaskPage({
           <CardTitle>Create New Task</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Task Title *
-              </label>
-              <input
-                name="title"
-                type="text"
-                required
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-                placeholder="Enter task title"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Description
-              </label>
-              <textarea
-                name="description"
-                rows={3}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-                placeholder="Task description (optional)"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  defaultValue="todo"
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Priority
-                </label>
-                <select
-                  name="priority"
-                  defaultValue="medium"
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Due Date
-              </label>
-              <input
-                name="due_date"
-                type="date"
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Department *
-              </label>
-              <select
-                name="department_id"
-                required
-                defaultValue={departmentId || ""}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-              >
-                <option value="">Select department</option>
-                {(departments ?? []).map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Project (optional)
-              </label>
-              <select
-                name="project_id"
-                defaultValue={projectId || ""}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-              >
-                <option value="">No project (private task)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Private tasks are only visible to the assignee, you, and admins.
-                Project tasks are visible to all project members.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Assign To *
-              </label>
-              <select
-                name="assignee_id"
-                required
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
-              >
-                <option value="">Select assignee</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.username} ({m.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="secondary" onClick={() => history.back()}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Create Task
-              </Button>
-            </div>
-          </form>
+          <TaskNewForm
+            departments={(departments ?? []) as { id: string; name: string }[]}
+            projects={projects}
+            allMembers={(allMembers ?? []) as Profile[]}
+            defaultDepartmentId={profile.department_id}
+            defaultProjectId={projectId || null}
+            isAdmin={profile.role === "admin"}
+            handleCreate={handleCreate}
+          />
         </CardContent>
       </Card>
     </div>

@@ -37,13 +37,13 @@ export async function getProject(id: string): Promise<Project | null> {
       )
     `)
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching project:", error);
     return null;
   }
-  return data as unknown as Project;
+  return data as unknown as Project | null;
 }
 
 export async function createProject(data: {
