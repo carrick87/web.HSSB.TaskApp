@@ -72,7 +72,7 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="color-scheme" content="light" />
       </head>
-      <body className="antialiased min-h-screen bg-neutral-100 text-neutral-1000">
+      <body className="antialiased min-h-screen" style={{ backgroundColor: '#F7F8F9', color: '#172B4D' }}>
         {children}
         <ServiceWorkerRegistration />
       </body>

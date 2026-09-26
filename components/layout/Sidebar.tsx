@@ -101,6 +101,37 @@ const CloseIcon = () => (
   </svg>
 );
 
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/tasks/upcoming': 'Upcoming',
+  '/tasks/history': 'History',
+  '/profile': 'Profile',
+  '/leaderboard': 'Leaderboard',
+  '/pm': 'My Tasks',
+  '/pm/team': 'Team Tasks',
+  '/pm/projects': 'Projects',
+  '/pm/tasks/new': 'New Task',
+  '/pm/projects/new': 'New Project',
+  '/pic/dashboard': 'PIC Dashboard',
+  '/pic/verify': 'Verify Tasks',
+  '/pic/templates': 'Templates',
+  '/pic/reports': 'Reports',
+  '/admin': 'Admin',
+  '/admin/users': 'Users',
+  '/admin/branches': 'Branches',
+  '/admin/departments': 'Departments',
+  '/admin/points': 'Points',
+};
+
+function getPageTitle(pathname: string): string {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  if (pathname.startsWith('/pm/tasks/')) return 'Task Details';
+  if (pathname.startsWith('/pm/projects/')) return 'Project';
+  if (pathname.startsWith('/tasks/')) return 'Task';
+  if (pathname.startsWith('/admin/users/')) return 'User Details';
+  return 'TaskApp';
+}
+
 function getNavSections(role: string): NavSection[] {
   const sections: NavSection[] = [
     {
@@ -169,6 +200,7 @@ export function Sidebar({
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const sections = getNavSections(role);
+  const pageTitle = getPageTitle(pathname);
 
   useEffect(() => {
     setIsOpen(false);
@@ -196,7 +228,7 @@ export function Sidebar({
         {sections.map((section, idx) => (
           <div key={idx} className="mb-4">
             {section.title && (
-              <h3 className="px-4 mb-2 text-[11px] font-bold text-neutral-700 uppercase tracking-wider">
+              <h3 className="px-4 mb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: '#44546F' }}>
                 {section.title}
               </h3>
             )}
@@ -207,13 +239,14 @@ export function Sidebar({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 px-2 py-2 rounded-atlassian text-sm transition-colors ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-atlassian text-sm transition-colors tap-target ${
                       active
                         ? "bg-brand-50 text-brand-700 font-medium"
-                        : "text-neutral-700 hover:bg-neutral-100"
+                        : "hover:bg-neutral-100"
                     }`}
+                    style={{ color: active ? '#0052CC' : '#172B4D', minHeight: '44px' }}
                   >
-                    <span className={active ? "text-brand-600" : "text-neutral-700"}>
+                    <span style={{ color: active ? '#0C66E4' : '#44546F' }}>
                       {item.icon}
                     </span>
                     {item.label}
@@ -225,14 +258,14 @@ export function Sidebar({
         ))}
       </div>
       
-      <div className="border-t border-neutral-200 p-4">
+      <div className="p-4" style={{ borderTop: '1px solid #DFE1E6' }}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-semibold">
+          <div className="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-semibold">
             {username.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-900 truncate">{username}</p>
-            <p className="text-xs text-neutral-700 capitalize">{role}</p>
+            <p className="text-sm font-medium truncate" style={{ color: '#172B4D' }}>{username}</p>
+            <p className="text-xs capitalize" style={{ color: '#44546F' }}>{role}</p>
           </div>
         </div>
         <LogoutButton />
@@ -242,41 +275,66 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed z-40 p-2 rounded-atlassian bg-white shadow-atlassian text-neutral-700 hover:bg-neutral-50"
-        style={{ top: 'max(0.75rem, env(safe-area-inset-top, 0px))', left: 'max(0.75rem, env(safe-area-inset-left, 0px))' }}
-        aria-label="Open menu"
+      {/* Mobile sticky top bar */}
+      <header
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white flex items-center gap-3"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          borderBottom: '1px solid #DFE1E6',
+          height: 'calc(56px + env(safe-area-inset-top, 0px))',
+        }}
       >
-        <MenuIcon />
-      </button>
+        <div className="flex items-center gap-3 px-3 h-14 w-full">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="flex items-center justify-center w-11 h-11 rounded-atlassian hover:bg-neutral-100 transition-colors tap-target"
+            style={{ color: '#172B4D' }}
+            aria-label="Open menu"
+          >
+            <MenuIcon />
+          </button>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">HS</span>
+            </div>
+          </Link>
+          <span className="font-medium text-sm truncate" style={{ color: '#172B4D' }}>{pageTitle}</span>
+        </div>
+      </header>
 
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-neutral-1000/50 z-40"
+          className="lg:hidden fixed inset-0 z-40"
+          style={{ backgroundColor: 'rgba(23, 43, 77, 0.5)' }}
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar drawer */}
       <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-neutral-200 transform transition-transform duration-200 ease-in-out ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          borderRight: '1px solid #DFE1E6',
+        }}
       >
-        <div className="flex items-center justify-between h-14 px-4 border-b border-neutral-200">
+        <div className="flex items-center justify-between h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center">
               <span className="text-white font-bold text-sm">HS</span>
             </div>
-            <span className="font-semibold text-neutral-900">TaskApp</span>
+            <span className="font-semibold" style={{ color: '#172B4D' }}>TaskApp</span>
           </Link>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1 text-neutral-700 hover:text-neutral-700"
+            className="flex items-center justify-center w-11 h-11 rounded-atlassian hover:bg-neutral-100 transition-colors tap-target"
+            style={{ color: '#172B4D' }}
             aria-label="Close menu"
           >
             <CloseIcon />
@@ -286,13 +344,16 @@ export function Sidebar({
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 w-60 bg-white border-r border-neutral-200">
-        <div className="flex items-center h-14 px-4 border-b border-neutral-200">
+      <aside
+        className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 w-60 bg-white"
+        style={{ borderRight: '1px solid #DFE1E6' }}
+      >
+        <div className="flex items-center h-14 px-4" style={{ borderBottom: '1px solid #DFE1E6' }}>
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-brand-700 rounded-atlassian flex items-center justify-center">
               <span className="text-white font-bold text-sm">HS</span>
             </div>
-            <span className="font-semibold text-neutral-900">TaskApp</span>
+            <span className="font-semibold" style={{ color: '#172B4D' }}>TaskApp</span>
           </Link>
         </div>
         <NavContent />
