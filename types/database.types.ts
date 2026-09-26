@@ -129,3 +129,73 @@ export interface UserPoints {
   month: number;
   year: number;
 }
+
+// =============================================================================
+// NEW TYPES: Projects, Tasks (manual), Attachments, Comments
+// =============================================================================
+
+export type TaskStatus2 = "todo" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high";
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  department_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  department?: Department | null;
+  creator?: Profile | null;
+  members?: ProjectMember[];
+}
+
+export interface ProjectMember {
+  project_id: string;
+  profile_id: string;
+  added_at: string;
+  profile?: Profile | null;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus2;
+  priority: TaskPriority;
+  due_date: string | null;
+  department_id: string;
+  project_id: string | null;
+  created_by: string;
+  assignee_id: string;
+  created_at: string;
+  updated_at: string;
+  department?: Department | null;
+  project?: Project | null;
+  creator?: Profile | null;
+  assignee?: Profile | null;
+  attachments?: TaskAttachment[];
+  comments?: TaskComment[];
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  file_path: string;
+  file_name: string;
+  file_size: number | null;
+  content_type: string | null;
+  uploaded_by: string;
+  created_at: string;
+  uploader?: Profile | null;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author?: Profile | null;
+}
