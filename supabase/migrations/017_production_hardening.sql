@@ -119,11 +119,13 @@ BEGIN
     END IF;
     IF NOT EXISTS (
       SELECT 1 FROM public.organization_members m
+      JOIN public.organizations o ON o.id = m.org_id
       WHERE m.org_id = NEW.current_org_id
         AND m.user_id = NEW.id
         AND m.status = 'active'
+        AND o.status = 'active'
     ) THEN
-      RAISE EXCEPTION 'current_org_id must be an organization you belong to';
+      RAISE EXCEPTION 'current_org_id must be an active organization you belong to';
     END IF;
   END IF;
 
@@ -308,6 +310,7 @@ BEGIN
       JOIN public.organizations o ON o.id = om.org_id AND o.status = 'active'
       WHERE om.org_id = t.template_org_id
         AND om.status = 'active'
+        AND om.role = 'member'
         AND om.branch_id = t.assign_to_id;
     ELSIF t.assign_to_type = 'department' AND t.assign_to_id IS NOT NULL THEN
       SELECT array_agg(om.user_id) INTO assignee_ids
@@ -315,6 +318,7 @@ BEGIN
       JOIN public.organizations o ON o.id = om.org_id AND o.status = 'active'
       WHERE om.org_id = t.template_org_id
         AND om.status = 'active'
+        AND om.role = 'member'
         AND om.department_id = t.assign_to_id;
     END IF;
 
@@ -754,6 +758,8 @@ $$;
 
 REVOKE ALL ON FUNCTION public.my_org_status(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.my_workspaces() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.my_org_status(UUID) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.my_workspaces() FROM anon;
 GRANT EXECUTE ON FUNCTION public.my_org_status(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.my_workspaces() TO authenticated;
 

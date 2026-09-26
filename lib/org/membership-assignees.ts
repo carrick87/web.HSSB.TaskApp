@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ORG_ROLES } from "@/lib/org/roles";
+
 async function orgIsActive(admin: SupabaseClient, orgId: string): Promise<boolean> {
   const { data } = await admin
     .from("organizations")
@@ -21,6 +23,7 @@ export async function listActiveMemberUserIdsByBranch(
     .select("user_id")
     .eq("org_id", orgId)
     .eq("status", "active")
+    .eq("role", ORG_ROLES.MEMBER)
     .eq("branch_id", branchId);
   return (data ?? []).map((r) => r.user_id as string);
 }
@@ -36,6 +39,7 @@ export async function listActiveMemberUserIdsByDepartment(
     .select("user_id")
     .eq("org_id", orgId)
     .eq("status", "active")
+    .eq("role", ORG_ROLES.MEMBER)
     .eq("department_id", departmentId);
   return (data ?? []).map((r) => r.user_id as string);
 }

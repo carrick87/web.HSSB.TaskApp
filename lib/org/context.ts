@@ -189,8 +189,10 @@ export async function requireOrgContext(): Promise<OrgContext> {
     const alternate = pickAlternateActiveWorkspace(workspaces, profile.current_org_id);
 
     if (alternate) {
-      await switchCurrentOrg(supabase, user.id, alternate.org_id);
-      redirect("/dashboard");
+      const switched = await switchCurrentOrg(supabase, user.id, alternate.org_id);
+      if (switched.ok) {
+        redirect("/dashboard");
+      }
     }
 
     if (currentStatus && currentStatus.org_status !== "active" && !platformAdminFlag) {
