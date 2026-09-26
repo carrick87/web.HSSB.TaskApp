@@ -62,7 +62,8 @@ test.describe("UI role gating", () => {
   });
 
   test("login page shows company branding text", async ({ page }) => {
-    await page.goto("/login", { waitUntil: "networkidle" });
+    const base = (process.env.BASE_URL || "http://localhost:3001").replace(/\/$/, "");
+    await page.goto(`${base}/login`, { waitUntil: "networkidle" });
     await expect(page.getByText("TaskApp", { exact: false }).first()).toBeVisible();
   });
 });
