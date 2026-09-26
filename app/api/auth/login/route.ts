@@ -69,9 +69,7 @@ export async function POST(request: Request) {
     await admin
       .from("profiles")
       .update({ last_sign_in_at: new Date().toISOString() })
-      .eq("username", username)
-      .then(() => undefined)
-      .catch(() => undefined);
+      .eq("username", username);
 
     return NextResponse.json({ user: data.user });
   } catch {
