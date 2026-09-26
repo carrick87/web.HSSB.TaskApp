@@ -34,7 +34,7 @@ async function shotSection(
 test.describe("email template screenshots", () => {
   test.setTimeout(300_000);
   test("render templates and settings in light and dark", async ({ page }) => {
-    await page.goto("/email-preview");
+    await page.goto("/email-preview?secret=preview-secret");
     await page.waitForSelector("#workspace_invite");
 
     for (const mode of ["light", "dark"] as const) {
@@ -45,12 +45,12 @@ test.describe("email template screenshots", () => {
 
       await page.emulateMedia({ colorScheme: mode });
       await page.setViewportSize({ width: 1200, height: 900 });
-      await page.locator("#notification-settings-grid").scrollIntoViewIfNeeded();
-      await page.locator("#notification-settings-grid").screenshot({
+      await page.locator("#notification-settings").scrollIntoViewIfNeeded();
+      await page.locator("#notification-settings").screenshot({
         path: path.join(OUT, `notifications-settings-grid-${mode}-1200.png`),
       });
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.locator("#notification-settings-grid").screenshot({
+      await page.locator("#notification-settings").screenshot({
         path: path.join(OUT, `notifications-settings-grid-${mode}-390.png`),
       });
     }
