@@ -153,7 +153,8 @@ export function OrganizationSettingsForm({ initialOrganization, orgId }: Props) 
       <div>
         <h1 className="text-xl font-semibold text-neutral-1000">Organization</h1>
         <p className="text-sm text-neutral-700 mt-0.5">
-          Branding for your workspace header, tab title, and installed app icon.
+          Workspace logos appear in the top bar, email headers, and invite or login screens. The installed app icon is the
+          product icon for everyone.
         </p>
       </div>
 
@@ -208,10 +209,9 @@ export function OrganizationSettingsForm({ initialOrganization, orgId }: Props) 
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-neutral-900">Square icon</h3>
-            <p className="text-xs text-neutral-700">PWA and mobile home screen. At least 512×512 px. Up to 1 MB.</p>
-            <p className="text-xs text-neutral-700 italic">
-              Installed apps show the new icon after reopening or reinstalling (iOS may cache longer).
+            <h3 className="text-sm font-semibold text-neutral-900">Square logo</h3>
+            <p className="text-xs text-neutral-700">
+              Used in the top bar, email headers, and invite or login screens. At least 512×512 px. Up to 1 MB.
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               {squareUrl ? (

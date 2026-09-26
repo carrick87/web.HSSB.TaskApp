@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
 import { writeOrgAuditLog } from "@/lib/org/audit";
@@ -16,11 +15,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const body = await request.json().catch(() => ({}));
-  const { username, harrison_email, role, branch_id, department_id } = body;
+  const { role, branch_id, department_id } = body;
 
-  if (!username?.trim() || username.trim().length < 3) {
-    return NextResponse.json({ error: "Username required (min 3 chars)" }, { status: 400 });
-  }
   if (!VALID_ROLES.includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
@@ -66,17 +62,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!isOrgAdminRole(ctx.role) && isOrgAdminRole(beforeMember.role as string)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({
-      username: username.trim(),
-      harrison_email: typeof harrison_email === "string" ? harrison_email.trim() || null : undefined,
-      branch_id: branch_id || null,
-      department_id: department_id || null,
-    })
-    .eq("id", targetUserId);
 
   const { data: afterMember, error } = await supabase
     .from("organization_members")

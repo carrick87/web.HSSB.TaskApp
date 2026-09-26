@@ -91,8 +91,6 @@ for f in "$ROOT"/supabase/migrations/{006,007,008,009,010,011,012,013,014,015,01
   apply_migration "" "$f"
 done
 
-sudo -u "$DB_USER" psql -d "$DB_NAME" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated, service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA storage TO authenticated, service_role;"
-
 log "Re-running migrations 006–017 (idempotency) ..."
 for f in "$ROOT"/supabase/migrations/{006,007,008,009,010,011,012,013,014,015,016,017}_*.sql; do
   apply_migration "rerun-$(basename "$f")" "$f"
@@ -127,35 +125,8 @@ ADMIN_ID='78925121-0000-4000-8000-000000000001'
 
 run_sql_inline "assert_tenant_policies" "SELECT task_app.assert_tenant_policies_reference_org();"
 
-log "Production code paths as authenticated admin ..."
-sudo -u "$DB_USER" psql -v ON_ERROR_STOP=1 -d "$DB_NAME" <<SQL
-SELECT set_config('request.jwt.claim.sub', '${ADMIN_ID}', true);
-SELECT set_config('request.jwt.claim.role', 'authenticated', true);
-SELECT set_config('request.jwt.claims', '{"sub":"${ADMIN_ID}","role":"authenticated"}', true);
-
-SET LOCAL ROLE authenticated;
-INSERT INTO tasks (title, department_id, created_by, assignee_id, org_id)
-VALUES (
-  'Replay path task',
-  (SELECT id FROM departments WHERE org_id = '${HSSB_ID}' LIMIT 1),
-  '${ADMIN_ID}'::uuid,
-  '${ADMIN_ID}'::uuid,
-  '${HSSB_ID}'::uuid
-);
-
-RESET ROLE;
-SELECT task_app.generate_daily_tasks();
-
-UPDATE task_instances
-SET status = 'verified', is_late = false
-WHERE id = (SELECT id FROM task_instances WHERE org_id = '${HSSB_ID}' AND status = 'pending' LIMIT 1);
-SQL
-pass "production code paths (insert task, generate_daily_tasks, points trigger)"
-
-run_sql "cross_org_isolation" "$ROOT/supabase/tests/cross_org_isolation.test.sql"
-
-log "Second-org isolation + escalation checks ..."
-sudo -u "$DB_USER" psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/supabase/tests/cross_org_isolation_full.sql" || fail "cross_org_isolation_full"
+run_sql "tenant_rls_matrix" "$ROOT/supabase/tests/tenant_rls_matrix.sql"
+run_sql "replay_production_paths" "$ROOT/supabase/tests/replay_production_paths.sql"
 
 pass "All replay steps completed"
-echo "[replay] SUMMARY: migrations 001-017 applied, 006-017 re-run, seed verified, paths exercised, policy audit OK"
+echo "[replay] SUMMARY: migrations 001-017 applied, 006-017 re-run, RLS matrix + production paths OK"

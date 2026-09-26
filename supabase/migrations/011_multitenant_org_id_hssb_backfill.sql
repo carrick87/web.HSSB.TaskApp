@@ -10,8 +10,32 @@ DECLARE
 BEGIN
   INSERT INTO public.organizations (id, name, short_name, slug, status)
   VALUES (v_hssb_id, 'Harrison Sabah Sdn Bhd', 'HSSB', 'hssb', 'active')
-  ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;
+  ON CONFLICT (slug) DO NOTHING;
 END $$;
+
+-- Map legacy role values on write so pre-deploy app code (staff/admin/pic) keeps working.
+CREATE OR REPLACE FUNCTION task_app.normalize_profile_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, task_app, pg_temp
+AS $$
+BEGIN
+  IF NEW.role = 'staff' THEN
+    NEW.role := 'user';
+  ELSIF NEW.role = 'admin' THEN
+    NEW.role := 'super_admin';
+  ELSIF NEW.role = 'pic' THEN
+    NEW.role := 'manager';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS profiles_normalize_role ON public.profiles;
+CREATE TRIGGER profiles_normalize_role
+  BEFORE INSERT OR UPDATE OF role ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION task_app.normalize_profile_role();
 
 -- Helper to add org_id column
 CREATE OR REPLACE FUNCTION task_app._add_org_id(p_table regclass)
@@ -65,14 +89,14 @@ BEGIN
       CASE WHEN p.role IN ('admin', 'super_admin') THEN 'owner' WHEN p.role IN ('pic', 'manager') THEN 'manager' ELSE 'member' END,
       p.branch_id, p.department_id, 'active'
     FROM public.profiles p
-    ON CONFLICT (org_id, user_id) DO UPDATE SET role = EXCLUDED.role, branch_id = EXCLUDED.branch_id, department_id = EXCLUDED.department_id, status = EXCLUDED.status;
+    ON CONFLICT (org_id, user_id) DO NOTHING;
   ELSE
     INSERT INTO public.organization_members (org_id, user_id, role, branch_id, department_id, status)
     SELECT v_hssb_id, p.id,
       CASE WHEN p.role IN ('admin', 'super_admin') THEN 'owner' WHEN p.role IN ('pic', 'manager') THEN 'manager' ELSE 'member' END,
       p.branch_id, p.department_id, CASE WHEN p.status = 'deactivated' THEN 'deactivated' ELSE 'active' END
     FROM public.profiles p
-    ON CONFLICT (org_id, user_id) DO UPDATE SET role = EXCLUDED.role, branch_id = EXCLUDED.branch_id, department_id = EXCLUDED.department_id, status = EXCLUDED.status;
+    ON CONFLICT (org_id, user_id) DO NOTHING;
   END IF;
 
   UPDATE public.profiles
@@ -140,19 +164,12 @@ BEGIN
   IF v_hssb_id IS NOT NULL AND v_admin_id IS NOT NULL THEN
     INSERT INTO public.organization_members (org_id, user_id, role, status)
     VALUES (v_hssb_id, v_admin_id, 'owner', 'active')
-    ON CONFLICT (org_id, user_id) DO UPDATE SET role = 'owner', status = 'active';
+    ON CONFLICT (org_id, user_id) DO NOTHING;
 
-    UPDATE public.profiles SET current_org_id = v_hssb_id WHERE id = v_admin_id;
+    UPDATE public.profiles SET current_org_id = v_hssb_id
+    WHERE id = v_admin_id AND current_org_id IS NULL;
 
     INSERT INTO public.platform_admins (user_id) VALUES (v_admin_id)
     ON CONFLICT (user_id) DO NOTHING;
-
-    UPDATE public.organization_members om
-    SET role = 'member'
-    FROM public.profiles p
-    WHERE om.org_id = v_hssb_id
-      AND om.user_id = p.id
-      AND p.username IN ('demo_admin', 'demo_manager', 'demo_member1', 'demo_member2')
-      AND om.user_id <> v_admin_id;
   END IF;
 END $$;

@@ -1,41 +1,50 @@
 # Multi-tenant migration (HSSB live data)
 
-Run **all** SQL migrations in filename order on production (`001` through the latest). Migrations `006`–`009` are required (roles, audit, branding storage); do not skip them.
+Production today is at migration **`005`** with its own `001`–`005` history. Apply **`006` through `017` only** — do **not** re-run `001`–`005` on production.
 
 ## Rollout sequence (production)
 
-1. **Migrate database** — apply `001`…`017` in order (≈5–15 minutes depending on `task_instances` volume).
-2. **Deploy application** immediately after migration completes.
+1. **Backup** — take a Supabase dashboard backup or `pg_dump` of the project before any DDL.
+2. **Migrate database** — apply `006_multitenant…` through `017_production_hardening.sql` in order. Prefer a **single transaction** (`BEGIN;` … `\i` each file … `COMMIT;`) so a failure rolls back the whole step; if a file uses non-transactional DDL (e.g. some `CREATE INDEX CONCURRENTLY`), document the exception and run those statements outside the transaction.
+3. **Deploy application** immediately after migration completes (same maintenance window).
 
-During the short window between steps 1 and 2, the database keeps legacy role values (`admin` / `pic` / `staff`) until `011` renames them; `006` only widens the role check constraint and does **not** rename early. After `011`, profile roles are `super_admin` / `manager` / `user`.
+### Rollback plan
 
-Signup continues to insert `staff` until deploy; `011` maps staff → `user`.
+- **After `011` / `012`:** you cannot safely revert the app to commit `1eb8bf8` without compatibility shims — org-scoped RLS and role renames break the old code. Roll forward with the new app or **restore the pre-migration backup** (Supabase restore / `pg_dump` replay). There is no supported down-migration to `005`-era schema once tenant RLS is enabled.
+- **Before deploy:** if migration fails mid-transaction, the DB should remain at `005`; fix SQL and retry.
 
-## Order
+During the short window between migration and deploy, signup may still insert legacy `staff` until the new app is live; migration `011` maps `staff` → `user` via trigger + CHECK.
 
-1. `001`–`005` — core schema, storage, username auth, admin RLS, projects/tasks
-2. `006`–`009` — roles/status, super-admin RLS, company branding bucket, password flag
-3. `010_multitenant_organizations.sql` — orgs, members, invites, platform admins, audit log, helpers
-4. `011_multitenant_org_id_hssb_backfill.sql` — `org_id` columns, HSSB org, memberships, role rename, production bootstrap
-5. `012_multitenant_rls.sql` — org-scoped RLS, legacy policy drops
-6. `013_multitenant_storage.sql` — storage policies (`org_id/` and legacy `task_id/` paths)
-7. `014_product_notifications_grouping.sql`
-8. `015_email_notifications.sql` — see `docs/EMAIL_NOTIFICATIONS.md`
-9. `016_email_design_preferences.sql`
-10. `017_production_hardening.sql` — privilege guards, org_id triggers, policy audit
+## Order (production: start at 006)
+
+1. `006`–`009` — roles/status, super-admin RLS, company branding bucket, password flag  
+2. `010_multitenant_organizations.sql` — orgs, members, invites, platform admins, audit log, helpers  
+3. `011_multitenant_org_id_hssb_backfill.sql` — `org_id` columns, HSSB org, memberships (insert-only on re-run), role rename, bootstrap  
+4. `012_multitenant_rls.sql` — org-scoped RLS  
+5. `013_multitenant_storage.sql` — storage policies + legacy path migration  
+6. `014`–`016` — notifications, email  
+7. `017_production_hardening.sql` — privilege guards, org_id triggers, policy audit  
+
+Local replay from repo baseline (`001`–`005` + seed): `bash scripts/replay-migrations.sh`.
+
+## Signup / roles
+
+- Profile roles after `011`: `super_admin`, `manager`, `user` (legacy `staff` mapped on write).  
+- Invited signup: profile row is created **before** `organization_members` (FK to `profiles.id`).  
+- Invites are marked accepted only after profile + membership succeed.
 
 ## Email cron split
 
-- **Vercel** (Hobby-safe): daily `0 1 * * *` → `/api/cron/email?scope=scheduled` (reminders + digests).
-- **Supabase pg_cron + pg_net**: every 5 minutes → `/api/cron/email?scope=outbox` with `CRON_SECRET` from Vault. See `docs/EMAIL_OUTBOX_CRON.md`.
+- **Vercel:** daily `0 1 * * *` → `/api/cron/email?scope=scheduled`  
+- **Supabase pg_cron + pg_net:** every 5 minutes → `/api/cron/email?scope=outbox` — see `docs/EMAIL_OUTBOX_CRON.md`
 
 ## Platform admin bootstrap
 
-Migration `011` idempotently sets the production `admin` user (username `admin`, id prefix `78925121…`, or `carrick@harrisons.com.my`) as **HSSB owner** and inserts `platform_admins`. Demo accounts remain **members**, never owner.
+Migration `011` inserts missing HSSB owner membership and `platform_admins` for the production `admin` user (does not overwrite existing membership roles on re-run).
 
 ## Cross-org RLS tests
 
-See `supabase/tests/MULTITENANT_RLS.md` and `supabase/tests/cross_org_isolation.test.sql`.
+`bash scripts/replay-migrations.sh` runs `supabase/tests/tenant_rls_matrix.sql` and `replay_production_paths.sql`.
 
 ## Pre-check / post-check
 
@@ -43,7 +52,7 @@ See sections below (unchanged queries).
 
 ## Product branding
 
-Global PWA/name/icon: `src/config/product.ts` (placeholder **TaskApp**). Workspace logos only in-app header and invite/login — not in the manifest.
+Global PWA/name/icon: product config. Workspace logos: top bar, email headers, invite/login only — not the installed app icon.
 
 ## Tables receiving `org_id`
 
@@ -64,52 +73,3 @@ Global PWA/name/icon: `src/config/product.ts` (placeholder **TaskApp**). Workspa
 | `project_members` | Scoped via project |
 
 Global (no `org_id`): `profiles`, `organizations`, `organization_members`, `organization_invites`, `platform_admins`, `organization_audit_log`.
-
-## Pre-check (run on production snapshot)
-
-```sql
--- Row counts before migration
-SELECT 'profiles' AS t, COUNT(*) FROM profiles
-UNION ALL SELECT 'branches', COUNT(*) FROM branches
-UNION ALL SELECT 'departments', COUNT(*) FROM departments
-UNION ALL SELECT 'task_templates', COUNT(*) FROM task_templates
-UNION ALL SELECT 'task_instances', COUNT(*) FROM task_instances
-UNION ALL SELECT 'projects', COUNT(*) FROM projects
-UNION ALL SELECT 'tasks', COUNT(*) FROM tasks
-UNION ALL SELECT 'user_points', COUNT(*) FROM user_points;
-
--- Confirm no org_id yet (should error or zero columns before 011)
-SELECT column_name FROM information_schema.columns
-WHERE table_name = 'branches' AND column_name = 'org_id';
-```
-
-## Post-check
-
-```sql
--- No NULL org_id on tenant tables
-SELECT 'branches' AS t, COUNT(*) FILTER (WHERE org_id IS NULL) AS null_org FROM branches
-UNION ALL SELECT 'departments', COUNT(*) FILTER (WHERE org_id IS NULL) FROM departments
-UNION ALL SELECT 'tasks', COUNT(*) FILTER (WHERE org_id IS NULL) FROM tasks;
-
--- Every profile has HSSB membership
-SELECT COUNT(*) AS profiles_without_membership
-FROM profiles p
-WHERE NOT EXISTS (
-  SELECT 1 FROM organization_members m
-  JOIN organizations o ON o.id = m.org_id AND o.slug = 'hssb'
-  WHERE m.user_id = p.id
-);
-
--- Role mapping sanity
-SELECT role, COUNT(*) FROM organization_members m
-JOIN organizations o ON o.id = m.org_id AND o.slug = 'hssb'
-GROUP BY role;
-```
-
-## HSSB plan
-
-1. Migration creates org slug `hssb` named **Harrison Sabah Sdn Bhd** (short **HSSB**).
-2. All existing rows get `org_id = hssb`.
-3. `profiles.role` mapped: admin/super_admin → **owner**, pic/manager → **manager**, staff/user → **member**.
-4. `profiles.current_org_id` set to HSSB for all users.
-5. Legacy `company_profile` dropped if present; branding moves to `organizations` row.

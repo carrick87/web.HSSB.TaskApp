@@ -32,8 +32,47 @@ export async function POST(request: Request) {
       );
     }
 
-    const auth_email = `${crypto.randomUUID()}@taskapp.local`;
     const admin = createAdminClient();
+
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+    if (existingProfile) {
+      return NextResponse.json({ error: "This username is already taken." }, { status: 400 });
+    }
+
+    let invite: {
+      id: string;
+      org_id: string;
+      role: string;
+      invited_by: string | null;
+      email: string;
+      status: string;
+      expires_at: string | null;
+    } | null = null;
+
+    if (inviteToken) {
+      const { data: inviteRow, error: inviteError } = await admin
+        .from("organization_invites")
+        .select("id, org_id, role, invited_by, email, status, expires_at")
+        .eq("token", inviteToken)
+        .maybeSingle();
+
+      if (inviteError || !inviteRow || inviteRow.status !== "pending") {
+        return NextResponse.json({ error: "Invalid or expired invitation." }, { status: 400 });
+      }
+      if (inviteRow.expires_at && new Date(inviteRow.expires_at) < new Date()) {
+        return NextResponse.json({ error: "Invitation has expired." }, { status: 400 });
+      }
+      if (emailRaw && inviteRow.email.toLowerCase() !== emailRaw) {
+        return NextResponse.json({ error: "Email does not match this invitation." }, { status: 400 });
+      }
+      invite = inviteRow;
+    }
+
+    const auth_email = invite?.email ?? (emailRaw || `${crypto.randomUUID()}@taskapp.local`);
 
     const { data: authUser, error: createError } = await admin.auth.admin.createUser({
       email: auth_email,
@@ -53,60 +92,9 @@ export async function POST(request: Request) {
     }
 
     let needsOnboarding = true;
-    let currentOrgId: string | null = null;
-
-    if (inviteToken) {
-      const { data: invite, error: inviteError } = await admin
-        .from("organization_invites")
-        .select("id, org_id, role, invited_by, email, status, expires_at")
-        .eq("token", inviteToken)
-        .maybeSingle();
-
-      if (inviteError || !invite || invite.status !== "pending") {
-        await admin.auth.admin.deleteUser(authUser.user.id);
-        return NextResponse.json({ error: "Invalid or expired invitation." }, { status: 400 });
-      }
-      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-        await admin.auth.admin.deleteUser(authUser.user.id);
-        return NextResponse.json({ error: "Invitation has expired." }, { status: 400 });
-      }
-      if (emailRaw && invite.email.toLowerCase() !== emailRaw) {
-        await admin.auth.admin.deleteUser(authUser.user.id);
-        return NextResponse.json({ error: "Email does not match this invitation." }, { status: 400 });
-      }
-
+    const currentOrgId = invite?.org_id ?? null;
+    if (invite) {
       needsOnboarding = false;
-      currentOrgId = invite.org_id;
-
-      const { error: memberError } = await admin.from("organization_members").insert({
-        org_id: invite.org_id,
-        user_id: authUser.user.id,
-        role: invite.role ?? ORG_ROLES.MEMBER,
-        status: "active",
-      });
-      if (memberError) {
-        await admin.auth.admin.deleteUser(authUser.user.id);
-        return NextResponse.json({ error: memberError.message }, { status: 500 });
-      }
-
-      const { error: usedError } = await admin
-        .from("organization_invites")
-        .update({ status: "accepted" })
-        .eq("id", invite.id)
-        .eq("status", "pending");
-      if (usedError) {
-        await admin.auth.admin.deleteUser(authUser.user.id);
-        return NextResponse.json({ error: usedError.message }, { status: 500 });
-      }
-
-      if (invite.invited_by) {
-        const { notifyInviteAccepted } = await import("@/lib/email/membership-events");
-        await notifyInviteAccepted({
-          orgId: invite.org_id,
-          inviterUserId: invite.invited_by,
-          inviteeUserId: authUser.user.id,
-        });
-      }
     }
 
     const { error: profileError } = await admin.from("profiles").insert({
@@ -126,6 +114,41 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "This username is already taken." }, { status: 400 });
       }
       return NextResponse.json({ error: profileError.message ?? "Could not create profile." }, { status: 500 });
+    }
+
+    if (invite) {
+      const { error: memberError } = await admin.from("organization_members").insert({
+        org_id: invite.org_id,
+        user_id: authUser.user.id,
+        role: invite.role ?? ORG_ROLES.MEMBER,
+        status: "active",
+      });
+      if (memberError) {
+        await admin.from("profiles").delete().eq("id", authUser.user.id);
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: memberError.message }, { status: 500 });
+      }
+
+      const { error: usedError } = await admin
+        .from("organization_invites")
+        .update({ status: "accepted" })
+        .eq("id", invite.id)
+        .eq("status", "pending");
+      if (usedError) {
+        await admin.from("organization_members").delete().eq("user_id", authUser.user.id).eq("org_id", invite.org_id);
+        await admin.from("profiles").delete().eq("id", authUser.user.id);
+        await admin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json({ error: usedError.message }, { status: 500 });
+      }
+
+      if (invite.invited_by) {
+        const { notifyInviteAccepted } = await import("@/lib/email/membership-events");
+        await notifyInviteAccepted({
+          orgId: invite.org_id,
+          inviterUserId: invite.invited_by,
+          inviteeUserId: authUser.user.id,
+        });
+      }
     }
 
     const supabase = await createClient();

@@ -82,6 +82,54 @@ CREATE POLICY "task_templates_org_manager_write" ON public.task_templates FOR AL
   USING (public.is_org_manager_or_above(org_id))
   WITH CHECK (public.is_org_manager_or_above(org_id));
 
+-- task_template_questions (scoped via template org)
+DROP POLICY IF EXISTS "task_template_questions_org_select" ON public.task_template_questions;
+DROP POLICY IF EXISTS "task_template_questions_org_manager_write" ON public.task_template_questions;
+CREATE POLICY "task_template_questions_org_select" ON public.task_template_questions FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.task_templates tt
+      WHERE tt.id = template_id AND public.is_org_member(tt.org_id)
+    )
+  );
+CREATE POLICY "task_template_questions_org_manager_write" ON public.task_template_questions FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.task_templates tt
+      WHERE tt.id = template_id AND public.is_org_manager_or_above(tt.org_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.task_templates tt
+      WHERE tt.id = template_id AND public.is_org_manager_or_above(tt.org_id)
+    )
+  );
+
+-- project_members (scoped via project org)
+DROP POLICY IF EXISTS "project_members_org_select" ON public.project_members;
+DROP POLICY IF EXISTS "project_members_org_manager_write" ON public.project_members;
+CREATE POLICY "project_members_org_select" ON public.project_members FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id = project_id AND public.is_org_member(p.org_id)
+    )
+  );
+CREATE POLICY "project_members_org_manager_write" ON public.project_members FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id = project_id AND public.is_org_manager_or_above(p.org_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id = project_id AND public.is_org_manager_or_above(p.org_id)
+    )
+  );
+
 -- task_instances
 DROP POLICY IF EXISTS "instances_select" ON public.task_instances;
 DROP POLICY IF EXISTS "instances_admin_all" ON public.task_instances;
@@ -158,42 +206,107 @@ CREATE POLICY "tasks_org_manager_delete" ON public.tasks FOR DELETE TO authentic
 
 DROP POLICY IF EXISTS "task_attachments_org" ON public.task_attachments;
 DROP POLICY IF EXISTS "task_comments_org" ON public.task_comments;
+DROP POLICY IF EXISTS "task_attachments_org_select" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_org_insert" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_org_update" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_attachments_org_delete" ON public.task_attachments;
+DROP POLICY IF EXISTS "task_comments_org_select" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_org_insert" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_org_update" ON public.task_comments;
+DROP POLICY IF EXISTS "task_comments_org_delete" ON public.task_comments;
 DROP POLICY IF EXISTS "point_settings_org" ON public.point_settings;
+DROP POLICY IF EXISTS "point_settings_org_select" ON public.point_settings;
+DROP POLICY IF EXISTS "point_settings_org_admin_write" ON public.point_settings;
 DROP POLICY IF EXISTS "user_points_org_select" ON public.user_points;
 DROP POLICY IF EXISTS "user_points_org_insert" ON public.user_points;
 DROP POLICY IF EXISTS "profiles_self_update" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_org_peers" ON public.profiles;
 
-CREATE POLICY "task_attachments_org" ON public.task_attachments FOR ALL TO authenticated
+CREATE POLICY "task_attachments_org_select" ON public.task_attachments FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.tasks t
-      WHERE t.id = task_id AND public.is_org_member(t.org_id)
-    )
-  )
-  WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = task_id AND public.is_org_member(t.org_id)
     )
   );
 
-CREATE POLICY "task_comments_org" ON public.task_comments FOR ALL TO authenticated
+CREATE POLICY "task_attachments_org_insert" ON public.task_attachments FOR INSERT TO authenticated
+  WITH CHECK (
+    uploaded_by = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_id AND public.is_org_member(t.org_id)
+    )
+  );
+
+CREATE POLICY "task_attachments_org_update" ON public.task_attachments FOR UPDATE TO authenticated
+  USING (
+    uploaded_by = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_id AND public.is_org_member(t.org_id)
+    )
+  )
+  WITH CHECK (uploaded_by = auth.uid());
+
+CREATE POLICY "task_attachments_org_delete" ON public.task_attachments FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_id
+        AND public.is_org_member(t.org_id)
+        AND (
+          task_attachments.uploaded_by = auth.uid()
+          OR public.is_org_manager_or_above(t.org_id)
+        )
+    )
+  );
+
+CREATE POLICY "task_comments_org_select" ON public.task_comments FOR SELECT TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = task_id AND public.is_org_member(t.org_id)
     )
-  )
+  );
+
+CREATE POLICY "task_comments_org_insert" ON public.task_comments FOR INSERT TO authenticated
   WITH CHECK (
-    EXISTS (
+    author_id = auth.uid()
+    AND EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = task_id AND public.is_org_member(t.org_id)
+    )
+  );
+
+CREATE POLICY "task_comments_org_update" ON public.task_comments FOR UPDATE TO authenticated
+  USING (
+    author_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_id AND public.is_org_member(t.org_id)
+    )
+  )
+  WITH CHECK (author_id = auth.uid());
+
+CREATE POLICY "task_comments_org_delete" ON public.task_comments FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_id
+        AND public.is_org_member(t.org_id)
+        AND (
+          task_comments.author_id = auth.uid()
+          OR public.is_org_manager_or_above(t.org_id)
+        )
     )
   );
 
 -- point_settings / user_points
-CREATE POLICY "point_settings_org" ON public.point_settings FOR ALL TO authenticated
+CREATE POLICY "point_settings_org_select" ON public.point_settings FOR SELECT TO authenticated
+  USING (public.is_org_member(org_id));
+
+CREATE POLICY "point_settings_org_admin_write" ON public.point_settings FOR ALL TO authenticated
   USING (public.is_org_admin(org_id))
   WITH CHECK (public.is_org_admin(org_id));
 

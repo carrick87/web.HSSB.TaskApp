@@ -17,7 +17,20 @@ function verifySvix(payload: string, secret: string, headers: Headers) {
   const signed = `${msgId}.${timestamp}.${payload}`;
   const secretBytes = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
   const expected = crypto.createHmac("sha256", secretBytes).update(signed).digest("base64");
-  return signature.split(" ").some((part) => part.split(",")[1] === expected);
+  const expectedBuf = Buffer.from(expected);
+  for (const part of signature.split(" ")) {
+    const sigValue = part.split(",")[1];
+    if (!sigValue) continue;
+    try {
+      const sigBuf = Buffer.from(sigValue);
+      if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+        return true;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return false;
 }
 
 export async function POST(request: Request) {

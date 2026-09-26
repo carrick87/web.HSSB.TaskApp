@@ -10,7 +10,7 @@ RETURNS TABLE (name TEXT, short_name TEXT, logo_wide_path TEXT, logo_square_path
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
   SELECT o.name, o.short_name, o.logo_wide_path, o.logo_square_path
   FROM public.organization_invites i
@@ -27,7 +27,7 @@ RETURNS TABLE (name TEXT, short_name TEXT, logo_wide_path TEXT, logo_square_path
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
   SELECT o.name, o.short_name, o.logo_wide_path, o.logo_square_path
   FROM public.organizations o
@@ -48,7 +48,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.platform_admins pa WHERE pa.user_id = auth.uid()
@@ -77,18 +77,23 @@ REVOKE UPDATE ON public.profiles FROM authenticated;
 GRANT UPDATE (
   username,
   timezone,
-  date_format
+  date_format,
+  current_org_id
 ) ON public.profiles TO authenticated;
+REVOKE UPDATE ON public.profiles FROM anon;
 
 CREATE OR REPLACE FUNCTION task_app.enforce_profiles_self_update()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
 DECLARE
-  jwt_role TEXT := current_setting('request.jwt.claim.role', true);
+  jwt_role TEXT := COALESCE(auth.role(), NULLIF(current_setting('request.jwt.claim.role', true), ''));
+  claims_role TEXT := COALESCE(auth.jwt()->>'role', '');
 BEGIN
-  IF jwt_role = 'service_role' THEN
+  IF jwt_role IN ('service_role', 'supabase_admin')
+     OR claims_role = 'service_role'
+     OR current_user = 'service_role' THEN
     RETURN NEW;
   END IF;
 
@@ -138,7 +143,7 @@ CREATE TRIGGER profiles_self_update_guard
 CREATE OR REPLACE FUNCTION task_app.tenant_fill_org_id()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
 DECLARE
   v_org UUID;
@@ -260,7 +265,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, task_app, pg_temp;
 
 CREATE OR REPLACE FUNCTION task_app.generate_daily_tasks()
 RETURNS void AS $$
@@ -289,7 +294,14 @@ BEGIN
     assignee_ids := ARRAY[]::UUID[];
 
     IF t.assign_to_type = 'user' AND t.assign_to_id IS NOT NULL THEN
-      assignee_ids := array_append(assignee_ids, t.assign_to_id);
+      IF EXISTS (
+        SELECT 1 FROM public.organization_members om
+        WHERE om.user_id = t.assign_to_id
+          AND om.org_id = t.template_org_id
+          AND om.status = 'active'
+      ) THEN
+        assignee_ids := array_append(assignee_ids, t.assign_to_id);
+      END IF;
     ELSIF t.assign_to_type = 'branch' AND t.assign_to_id IS NOT NULL THEN
       SELECT array_agg(p.id) INTO assignee_ids
       FROM profiles p
@@ -312,7 +324,49 @@ BEGIN
     END LOOP;
   END LOOP;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, task_app, pg_temp;
+
+-- Cross-org reference guards (tasks/projects)
+CREATE OR REPLACE FUNCTION task_app.enforce_tenant_reference_org()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, task_app, pg_temp
+AS $$
+DECLARE
+  v_ref_org UUID;
+BEGIN
+  IF TG_TABLE_NAME = 'tasks' THEN
+    IF NEW.department_id IS NOT NULL THEN
+      SELECT org_id INTO v_ref_org FROM public.departments WHERE id = NEW.department_id;
+      IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+        RAISE EXCEPTION 'department_id must belong to the same organization';
+      END IF;
+    END IF;
+    IF NEW.project_id IS NOT NULL THEN
+      SELECT org_id INTO v_ref_org FROM public.projects WHERE id = NEW.project_id;
+      IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+        RAISE EXCEPTION 'project_id must belong to the same organization';
+      END IF;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'projects' AND NEW.department_id IS NOT NULL THEN
+    SELECT org_id INTO v_ref_org FROM public.departments WHERE id = NEW.department_id;
+    IF v_ref_org IS NULL OR (NEW.org_id IS NOT NULL AND v_ref_org <> NEW.org_id) THEN
+      RAISE EXCEPTION 'department_id must belong to the same organization';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tasks_enforce_tenant_refs ON public.tasks;
+CREATE TRIGGER tasks_enforce_tenant_refs
+  BEFORE INSERT OR UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_tenant_reference_org();
+
+DROP TRIGGER IF EXISTS projects_enforce_tenant_refs ON public.projects;
+CREATE TRIGGER projects_enforce_tenant_refs
+  BEFORE INSERT OR UPDATE ON public.projects
+  FOR EACH ROW EXECUTE FUNCTION task_app.enforce_tenant_reference_org();
 
 -- =============================================================================
 -- Tenant RLS policy audit (fail migration if policies omit org membership)
@@ -325,7 +379,7 @@ CREATE POLICY "task_user_stats_org_select" ON public.task_user_stats FOR SELECT 
 CREATE OR REPLACE FUNCTION task_app.assert_tenant_policies_reference_org()
 RETURNS void
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, task_app, pg_temp
 AS $$
 DECLARE
   bad RECORD;
@@ -335,15 +389,22 @@ BEGIN
     FROM pg_policies
     WHERE schemaname = 'public'
       AND tablename IN (
-        'branches','departments','task_templates','task_instances','projects','tasks',
+        'branches','departments','task_templates','task_template_questions','task_instances',
+        'task_instance_answers','projects','project_members','tasks',
+        'task_attachments','task_comments',
         'point_settings','user_points','task_user_stats','notifications','notification_events',
-        'email_preferences','task_watchers'
+        'email_preferences','task_watchers',
+        'organization_members','organization_invites','organization_audit_log'
       )
       AND COALESCE(qual, '') || ' ' || COALESCE(with_check, '') NOT ILIKE '%is_org_member%'
       AND COALESCE(qual, '') || ' ' || COALESCE(with_check, '') NOT ILIKE '%is_org_admin%'
       AND COALESCE(qual, '') || ' ' || COALESCE(with_check, '') NOT ILIKE '%is_org_manager_or_above%'
       AND COALESCE(qual, '') || ' ' || COALESCE(with_check, '') NOT ILIKE '%org_role%'
-      AND policyname NOT IN ('profiles_self_update', 'profiles_select_org_peers', 'email_preferences_own', 'push_tokens_own')
+      AND policyname NOT IN (
+        'profiles_self_update', 'profiles_select_org_peers', 'email_preferences_own', 'push_tokens_own',
+        'org_members_self_read', 'platform_admins_select', 'organizations_select_member',
+        'organizations_insert_authenticated', 'organizations_platform_suspend'
+      )
   LOOP
     RAISE EXCEPTION 'Policy % on %.% must reference org membership helpers', bad.policyname, bad.schemaname, bad.tablename;
   END LOOP;
