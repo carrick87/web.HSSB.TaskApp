@@ -1,4 +1,5 @@
-import { requireRole, requireOrgContext } from "@/lib/auth";
+import { requireOrgManagerOrAbove, requireOrgContext } from "@/lib/auth";
+import { isOrgAdminRole } from "@/lib/org/roles";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createTask } from "@/lib/tasks-v2";
@@ -14,7 +15,8 @@ export default async function NewTaskPage({
   searchParams: Promise<{ project?: string }>;
 }) {
   const { project: projectId } = await searchParams;
-  const profile = await requireRole(["super_admin", "manager"]);
+  const pageCtx = await requireOrgManagerOrAbove();
+  const profile = pageCtx.profile;
 
   const supabase = await createClient();
   const { data: departments } = await supabase
@@ -31,8 +33,9 @@ export default async function NewTaskPage({
 
   async function handleCreate(formData: FormData) {
     "use server";
-    const profile = await requireRole(["super_admin", "manager"]);
-    const ctx = await requireOrgContext();
+    const actionCtx = await requireOrgManagerOrAbove();
+    const profile = actionCtx.profile;
+    const orgCtx = await requireOrgContext();
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -65,7 +68,7 @@ export default async function NewTaskPage({
     }
 
     await notifyTaskAssigned({
-      orgId: ctx.org.id,
+      orgId: orgCtx.org.id,
       taskId: task.id,
       taskTitle: task.title,
       assigneeId: assignee_id,
@@ -93,7 +96,7 @@ export default async function NewTaskPage({
             allMembers={(allMembers ?? []) as Profile[]}
             defaultDepartmentId={profile.department_id}
             defaultProjectId={projectId || null}
-            isAdmin={profile.role === "super_admin"}
+            isAdmin={isOrgAdminRole(pageCtx.membership.role)}
             handleCreate={handleCreate}
           />
         </CardContent>

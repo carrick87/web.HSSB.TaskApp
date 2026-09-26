@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
+import { ORG_ROLES } from "@/lib/org/roles";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { VerifyActions } from "@/components/tasks/VerifyActions";
@@ -24,7 +25,7 @@ export default async function PicVerifyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await requireProfile();
+  const { profile, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   const { data: task, error } = await supabase
@@ -55,15 +56,17 @@ export default async function PicVerifyDetailPage({
     );
   }
 
-  if (profile.role === "manager") {
+  if (membership.role === ORG_ROLES.MANAGER) {
     const assigneeId = (task as { assignee_profile_id: string }).assignee_profile_id;
+    const branchId = membership.branch_id ?? profile.branch_id;
+    const deptId = membership.department_id ?? profile.department_id;
     const { data: assigneeProfileData } = await supabase
       .from("profiles")
       .select("branch_id, department_id")
       .eq("id", assigneeId)
       .single();
-    const sameBranch = profile.branch_id && assigneeProfileData?.branch_id === profile.branch_id;
-    const sameDept = profile.department_id && assigneeProfileData?.department_id === profile.department_id;
+    const sameBranch = branchId && assigneeProfileData?.branch_id === branchId;
+    const sameDept = deptId && assigneeProfileData?.department_id === deptId;
     if (!sameBranch && !sameDept) notFound();
   }
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
+import { ORG_ROLES } from "@/lib/org/roles";
 import Link from "next/link";
 import { TemplateForm } from "@/components/templates/TemplateForm";
 
@@ -10,7 +11,7 @@ export default async function EditTemplatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await requireProfile();
+  const { profile, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   const { data: template, error } = await supabase
@@ -19,7 +20,7 @@ export default async function EditTemplatePage({
     .eq("id", id)
     .single();
   if (error || !template) notFound();
-  if (profile.role === "manager" && template.created_by_profile_id !== profile.id) {
+  if (membership.role === ORG_ROLES.MANAGER && template.created_by_profile_id !== profile.id) {
     notFound();
   }
 

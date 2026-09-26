@@ -1,12 +1,12 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { requireRole } from "@/lib/auth";
+import { requireOrgManagerOrAbove } from "@/lib/auth";
 
 export default async function PicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["super_admin", "manager"]);
+  await requireOrgManagerOrAbove();
   return (
     <AppLayout>
       <div>{children}</div>

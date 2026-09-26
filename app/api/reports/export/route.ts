@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgApiContext } from "@/lib/org/api-auth";
+import { ORG_ROLES } from "@/lib/org/roles";
+import { managerCanAccessAssignee } from "@/lib/tasks/manager-assignee-scope";
 import { buildTaskInstancesSheet, sheetToBuffer } from "@/lib/excel";
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgCtx = await getOrgApiContext(false, true);
+  if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, branch_id, department_id")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "super_admin" && profile?.role !== "manager") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const supabase = await createClient();
 
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branch_id") || undefined;
@@ -41,10 +36,10 @@ export async function GET(request: Request) {
     .order("assignment_date", { ascending: false })
     .limit(5000);
 
-  if (profile.role === "manager") {
+  if (orgCtx.role === ORG_ROLES.MANAGER) {
     const orFilters: string[] = [];
-    if (profile.branch_id) orFilters.push(`branch_id.eq.${profile.branch_id}`);
-    if (profile.department_id) orFilters.push(`department_id.eq.${profile.department_id}`);
+    if (orgCtx.branchId) orFilters.push(`branch_id.eq.${orgCtx.branchId}`);
+    if (orgCtx.departmentId) orFilters.push(`department_id.eq.${orgCtx.departmentId}`);
     const { data: assignees } = await supabase
       .from("profiles")
       .select("id")

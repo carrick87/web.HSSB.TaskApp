@@ -1,11 +1,11 @@
-import { requireRole } from "@/lib/auth";
+import { requireOrgManagerOrAbove } from "@/lib/auth";
 import { getProjects } from "@/lib/projects";
 import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ProjectsPage() {
-  await requireRole(["super_admin", "manager"]);
+  await requireOrgManagerOrAbove();
   const projects = await getProjects();
 
   return (

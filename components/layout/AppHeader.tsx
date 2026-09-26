@@ -1,10 +1,18 @@
 import Link from "next/link";
-import { requireProfile } from "@/lib/auth";
+import { requireProfile, getCurrentOrgRole } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { logout } from "@/app/actions/auth";
+import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/platform-admin";
+import { isOrgAdminRole, isOrgManagerOrAbove } from "@/lib/org/roles";
 
 export async function AppHeader() {
   const profile = await requireProfile();
+  const orgRole = await getCurrentOrgRole();
+  const supabase = await createClient();
+  const platformAdmin = await isPlatformAdmin(supabase);
+  const managerOrAbove = orgRole ? isOrgManagerOrAbove(orgRole) : false;
+  const orgAdmin = orgRole ? isOrgAdminRole(orgRole) : false;
 
   function NavLinks() {
     const links: { href: string; label: string }[] = [
@@ -14,13 +22,13 @@ export async function AppHeader() {
       { href: "/profile", label: "Profile" },
     ];
     links.push({ href: "/pm", label: "Projects" });
-    if (profile.role === "manager" || profile.role === "super_admin") {
+    if (managerOrAbove) {
       links.push({ href: "/pic/dashboard", label: "PIC" });
       links.push({ href: "/pic/verify", label: "Verify" });
       links.push({ href: "/pic/templates", label: "Templates" });
       links.push({ href: "/pic/reports", label: "Reports" });
     }
-    if (profile.role === "super_admin") {
+    if (orgAdmin || platformAdmin) {
       links.push({ href: "/admin", label: "Admin" });
     }
     links.push({ href: "/leaderboard", label: "Leaderboard" });

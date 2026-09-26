@@ -142,6 +142,11 @@ BEGIN
       ON CONFLICT (user_id) DO NOTHING;
     END IF;
 
+    -- Demo accounts: global profile.role is not used for authorization; keep demo_* at lowest tier.
+    UPDATE public.profiles SET role = 'user'
+    WHERE username = 'demo_admin' OR username LIKE 'demo\_member%' ESCAPE '\';
+    UPDATE public.profiles SET role = 'manager' WHERE username = 'demo_manager';
+
     INSERT INTO public.migration_state (key) VALUES ('011_hssb_profile_backfill');
   END IF;
 END $$;
@@ -184,11 +189,6 @@ DROP FUNCTION IF EXISTS task_app._add_org_id(regclass);
 UPDATE public.profiles SET role = 'super_admin' WHERE role = 'admin';
 UPDATE public.profiles SET role = 'manager' WHERE role = 'pic';
 UPDATE public.profiles SET role = 'user' WHERE role = 'staff';
-
--- Demo accounts: global profile.role is not used for authorization; keep demo_* at lowest tier.
-UPDATE public.profiles SET role = 'user'
-WHERE username = 'demo_admin' OR username LIKE 'demo\_member%' ESCAPE '\';
-UPDATE public.profiles SET role = 'manager' WHERE username = 'demo_manager';
 
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check

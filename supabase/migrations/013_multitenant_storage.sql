@@ -188,13 +188,18 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, storage, pg_temp
 AS $$
-  SELECT task_app.task_files_org_id(p_name)
+  SELECT CASE
+    WHEN task_app.task_files_org_id(p_name) IS NULL THEN NULL
+    WHEN (SELECT auth.role()) = 'service_role' THEN task_app.task_files_org_id(p_name)
+    WHEN public.is_org_member(task_app.task_files_org_id(p_name)) THEN task_app.task_files_org_id(p_name)
+    ELSE NULL
+  END
 $$;
 
 REVOKE ALL ON FUNCTION public.task_files_instance_id(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.task_files_org_id(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.task_files_instance_id(TEXT) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.task_files_org_id(TEXT) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.task_files_instance_id(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.task_files_org_id(TEXT) TO authenticated;
 
 CREATE POLICY "task_files_upload"
   ON storage.objects FOR INSERT TO authenticated

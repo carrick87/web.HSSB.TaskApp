@@ -1,13 +1,15 @@
-import { requireRole } from "@/lib/auth";
+import { requireOrgManagerOrAbove } from "@/lib/auth";
+import { isOrgAdminRole, ORG_ROLES } from "@/lib/org/roles";
 import { getTeamTasks } from "@/lib/tasks-v2";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Link from "next/link";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
 
 export default async function TeamTasksPage() {
-  const profile = await requireRole(["super_admin", "manager"]);
+  const ctx = await requireOrgManagerOrAbove();
+  const { profile, membership } = ctx;
   
-  if (!profile.department_id && profile.role !== "super_admin") {
+  if (!membership.department_id && !profile.department_id && !isOrgAdminRole(membership.role)) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -24,9 +26,10 @@ export default async function TeamTasksPage() {
     );
   }
 
-  const tasks = profile.role === "super_admin" 
+  const deptId = membership.department_id ?? profile.department_id;
+  const tasks = isOrgAdminRole(membership.role)
     ? await getTeamTasks("") 
-    : await getTeamTasks(profile.department_id!);
+    : await getTeamTasks(deptId!);
 
   const groupedByAssignee = tasks.reduce((acc, task) => {
     const assigneeId = task.assignee_id;

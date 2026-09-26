@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { ORG_ROLES } from "@/lib/org/roles";
+import { isOrgManagerOrAbove, ORG_ROLES } from "@/lib/org/roles";
 
-type Ctx = { orgId: string; userId: string; role: string };
+export type OrgApiContext = {
+  orgId: string;
+  userId: string;
+  role: string;
+  branchId: string | null;
+  departmentId: string | null;
+};
 
-export async function getOrgApiContext(requireAdmin = false): Promise<Ctx | NextResponse> {
+type Ctx = OrgApiContext;
+
+export async function getOrgApiContext(
+  requireAdmin = false,
+  requireManagerOrAbove = false
+): Promise<Ctx | NextResponse> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,7 +43,7 @@ export async function getOrgApiContext(requireAdmin = false): Promise<Ctx | Next
 
   const { data: membership } = await supabase
     .from("organization_members")
-    .select("role, status")
+    .select("role, status, branch_id, department_id")
     .eq("org_id", orgId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -47,5 +58,15 @@ export async function getOrgApiContext(requireAdmin = false): Promise<Ctx | Next
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return { orgId, userId: user.id, role };
+  if (requireManagerOrAbove && !isOrgManagerOrAbove(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return {
+    orgId,
+    userId: user.id,
+    role,
+    branchId: (membership.branch_id as string | null) ?? null,
+    departmentId: (membership.department_id as string | null) ?? null,
+  };
 }

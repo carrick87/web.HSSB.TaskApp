@@ -1,23 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
 import { getTodayAppDate } from "@/lib/date";
 import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
+import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
 
 export default async function PicDashboardPage() {
-  const profile = await requireProfile();
+  const { profile, membership } = await requireOrgContext();
   const supabase = await createClient();
   const today = getTodayAppDate();
 
-  const branchId = profile.branch_id ?? undefined;
-  const deptId = profile.department_id ?? undefined;
+  const branchId = membership.branch_id ?? profile.branch_id ?? undefined;
+  const deptId = membership.department_id ?? profile.department_id ?? undefined;
+  const orgWide = isOrgAdminRole(membership.role);
 
   const baseQuery = supabase
     .from("task_instances")
     .select("id, status, is_late, assignee_profile_id", { count: "exact" });
 
   let query = baseQuery;
-  if (profile.role === "manager") {
+  if (membership.role === ORG_ROLES.MANAGER) {
     const orFilters: string[] = [];
     if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
     if (deptId) orFilters.push(`department_id.eq.${deptId}`);
@@ -32,13 +34,13 @@ export default async function PicDashboardPage() {
 
   const [pendingRes, verifiedTodayRes, lateRes, allRes] = await Promise.all([
     query.eq("status", "submitted").then((r) => r),
-    profile.role === "super_admin"
+    orgWide
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("status", "verified").gte("verified_at", `${today}T00:00:00`)
       : query.eq("status", "verified").gte("verified_at", `${today}T00:00:00`).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "super_admin"
+    orgWide
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("is_late", true).eq("assignment_date", today)
       : query.eq("is_late", true).eq("assignment_date", today).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "super_admin"
+    orgWide
       ? supabase.from("task_instances").select("id, status", { count: "exact" })
       : query.select("id, status"),
   ]);

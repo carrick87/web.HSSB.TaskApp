@@ -605,6 +605,7 @@ CREATE POLICY "task_instance_answers_assignee_update" ON public.task_instance_an
       SELECT 1 FROM public.task_instances ti
       WHERE ti.id = task_instance_id
         AND ti.assignee_profile_id = auth.uid()
+        AND ti.status IN ('pending', 'accepted', 'rejected')
         AND public.is_org_member(ti.org_id)
     )
   )
@@ -613,6 +614,7 @@ CREATE POLICY "task_instance_answers_assignee_update" ON public.task_instance_an
       SELECT 1 FROM public.task_instances ti
       WHERE ti.id = task_instance_id
         AND ti.assignee_profile_id = auth.uid()
+        AND ti.status IN ('pending', 'accepted', 'rejected')
         AND public.is_org_member(ti.org_id)
     )
   );

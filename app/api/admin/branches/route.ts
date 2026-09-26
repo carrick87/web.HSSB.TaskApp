@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgApiContext } from "@/lib/org/api-auth";
 import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "super_admin" && profile?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const orgCtx = await getOrgApiContext(true);
+  if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const orgId = await getActiveOrgIdForUser(supabase, user.id);
+  const supabase = await createClient();
+  const orgId = await getActiveOrgIdForUser(supabase, orgCtx.userId);
   if (!orgId) return NextResponse.json({ error: "No active workspace" }, { status: 403 });
 
   const body = await request.json().catch(() => ({}));

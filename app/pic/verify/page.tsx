@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
+import { ORG_ROLES } from "@/lib/org/roles";
 
 export default async function PicVerifyListPage() {
-  const profile = await requireProfile();
+  const { profile, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   let query = supabase
@@ -24,10 +25,12 @@ export default async function PicVerifyListPage() {
     .eq("status", "submitted")
     .order("submitted_at", { ascending: true });
 
-  if (profile.role === "manager") {
+  if (membership.role === ORG_ROLES.MANAGER) {
     const orFilters: string[] = [];
-    if (profile.branch_id) orFilters.push(`branch_id.eq.${profile.branch_id}`);
-    if (profile.department_id) orFilters.push(`department_id.eq.${profile.department_id}`);
+    const branchId = membership.branch_id ?? profile.branch_id;
+    const deptId = membership.department_id ?? profile.department_id;
+    if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
+    if (deptId) orFilters.push(`department_id.eq.${deptId}`);
     const { data: assignees } = await supabase
       .from("profiles")
       .select("id")

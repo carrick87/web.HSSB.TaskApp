@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateTasksForToday } from "@/lib/tasks";
+import { getOrgApiContext } from "@/lib/org/api-auth";
 import { getActiveOrgIdForUser } from "@/lib/org/active-org";
+import { generateTasksForToday } from "@/lib/tasks";
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgCtx = await getOrgApiContext(false, true);
+  if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "super_admin" && profile?.role !== "manager") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const supabase = await createClient();
 
   const body = await request.json().catch(() => ({}));
   const {
@@ -40,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "At least one question is required" }, { status: 400 });
   }
 
-  const orgId = await getActiveOrgIdForUser(supabase, user.id);
+  const orgId = await getActiveOrgIdForUser(supabase, orgCtx.userId);
   if (!orgId) return NextResponse.json({ error: "No active workspace" }, { status: 403 });
 
   const { data: template, error: templateError } = await supabase
@@ -56,7 +49,7 @@ export async function POST(request: Request) {
       requires_verification: requires_verification !== false,
       assign_to_type: assign_to_type ?? "user",
       assign_to_id: assign_to_id || null,
-      created_by_profile_id: created_by_profile_id || user.id,
+      created_by_profile_id: created_by_profile_id || orgCtx.userId,
       org_id: orgId,
     })
     .select("id")
@@ -83,8 +76,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: questionsError.message }, { status: 500 });
   }
 
-  // Whenever a task template is created, generate today's task instances so assignees see them instantly.
-  // Cron continues to run for recurring tasks on future days.
   await generateTasksForToday(
     template.id,
     assign_to_type ?? "user",

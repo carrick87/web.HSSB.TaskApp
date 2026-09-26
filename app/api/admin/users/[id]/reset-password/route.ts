@@ -4,6 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES } from "@/lib/org/roles";
 import { isPlatformAdmin } from "@/lib/platform-admin";
+import {
+  evaluateOrgAdminPasswordReset,
+  loadTargetMembershipsForReset,
+} from "@/lib/admin/password-reset-policy";
+
+const FORGOT_PASSWORD_MESSAGE =
+  "This user belongs to more than one workspace or has admin access elsewhere. They must use the self-service “Forgot password” email to reset their password.";
 
 export async function POST(
   request: Request,
@@ -29,17 +36,26 @@ export async function POST(
 
   const targetRole = targetMembership.role as string;
 
-  const { data: targetIsPlatformAdmin } = await createAdminClient()
+  const admin = createAdminClient();
+  const { data: targetIsPlatformAdmin } = await admin
     .from("platform_admins")
     .select("user_id")
     .eq("user_id", targetUserId)
     .maybeSingle();
 
-  if (targetIsPlatformAdmin && !platformAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const targetMemberships = await loadTargetMembershipsForReset(admin, targetUserId);
+  const decision = evaluateOrgAdminPasswordReset({
+    callerOrgId: orgCtx.orgId,
+    callerIsPlatformAdmin: platformAdmin,
+    targetIsPlatformAdmin: !!targetIsPlatformAdmin,
+    targetRoleInCallerOrg: targetRole,
+    targetMemberships,
+  });
 
-  if (targetRole === ORG_ROLES.OWNER && !platformAdmin) {
+  if (!decision.allowed) {
+    if (decision.reason === "forgot_password") {
+      return NextResponse.json({ error: FORGOT_PASSWORD_MESSAGE }, { status: 403 });
+    }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -59,7 +75,6 @@ export async function POST(
     );
   }
 
-  const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(targetUserId, { password });
 
   if (error) {

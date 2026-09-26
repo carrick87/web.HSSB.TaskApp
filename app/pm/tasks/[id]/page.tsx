@@ -1,4 +1,5 @@
 import { requireProfile, requireOrgContext } from "@/lib/auth";
+import { isOrgAdminRole } from "@/lib/org/roles";
 import { getTask, updateTask, addTaskComment, deleteTaskComment } from "@/lib/tasks-v2";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -30,8 +31,8 @@ export default async function TaskDetailPage({
 
   const isAssignee = task.assignee_id === profile.id;
   const isCreator = task.created_by === profile.id;
-  const isSuperAdmin = profile.role === "super_admin";
-  const canEdit = isAssignee || isCreator || isSuperAdmin;
+  const isOrgAdmin = isOrgAdminRole(ctx.membership.role);
+  const canEdit = isAssignee || isCreator || isOrgAdmin;
 
   const supabase = await createClient();
   const { data: watchRow } = await supabase
@@ -116,7 +117,7 @@ export default async function TaskDetailPage({
             {task.title}
           </h1>
         </div>
-        {(isCreator || isSuperAdmin) && (
+        {(isCreator || isOrgAdmin) && (
           <Link
             href={`/pm/tasks/${id}/edit`}
             className="text-sm text-brand-700 hover:text-brand-800 hover:underline"
@@ -169,7 +170,7 @@ export default async function TaskDetailPage({
                             {new Date(comment.created_at).toLocaleDateString()}{" "}
                             {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </time>
-                          {(comment.author_id === profile.id || isSuperAdmin) && (
+                          {(comment.author_id === profile.id || isOrgAdmin) && (
                             <form action={handleDeleteComment}>
                               <input type="hidden" name="commentId" value={comment.id} />
                               <button
