@@ -147,6 +147,13 @@ BEGIN
     WHERE username = 'demo_admin' OR username LIKE 'demo\_member%' ESCAPE '\';
     UPDATE public.profiles SET role = 'manager' WHERE username = 'demo_manager';
 
+    UPDATE public.organization_members om
+    SET
+      branch_id = COALESCE(om.branch_id, p.branch_id),
+      department_id = COALESCE(om.department_id, p.department_id)
+    FROM public.profiles p
+    WHERE om.org_id = v_hssb_id AND om.user_id = p.id;
+
     INSERT INTO public.migration_state (key) VALUES ('011_hssb_profile_backfill');
   END IF;
 END $$;

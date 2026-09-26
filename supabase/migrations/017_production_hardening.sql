@@ -546,7 +546,15 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT branch_id FROM public.profiles WHERE id = auth.uid()
+  SELECT om.branch_id
+  FROM public.profiles p
+  JOIN public.organization_members om
+    ON om.user_id = p.id AND om.org_id = p.current_org_id
+  JOIN public.organizations o ON o.id = om.org_id
+  WHERE p.id = auth.uid()
+    AND om.status = 'active'
+    AND o.status = 'active'
+  LIMIT 1
 $$;
 
 CREATE OR REPLACE FUNCTION public.user_department_id()
@@ -556,7 +564,50 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT department_id FROM public.profiles WHERE id = auth.uid()
+  SELECT om.department_id
+  FROM public.profiles p
+  JOIN public.organization_members om
+    ON om.user_id = p.id AND om.org_id = p.current_org_id
+  JOIN public.organizations o ON o.id = om.org_id
+  WHERE p.id = auth.uid()
+    AND om.status = 'active'
+    AND o.status = 'active'
+  LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_org_member(p_org_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.organization_members m
+    JOIN public.organizations o ON o.id = m.org_id
+    WHERE m.org_id = p_org_id
+      AND m.user_id = auth.uid()
+      AND m.status = 'active'
+      AND o.status = 'active'
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION public.org_role(p_org_id UUID)
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT m.role
+  FROM public.organization_members m
+  JOIN public.organizations o ON o.id = m.org_id
+  WHERE m.org_id = p_org_id
+    AND m.user_id = auth.uid()
+    AND m.status = 'active'
+    AND o.status = 'active'
+  LIMIT 1
 $$;
 
 ALTER TABLE public.task_template_questions

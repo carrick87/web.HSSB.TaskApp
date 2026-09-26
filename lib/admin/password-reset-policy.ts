@@ -39,12 +39,7 @@ export function evaluateOrgAdminPasswordReset(params: {
 
   const otherOrgs = active.filter((m) => m.org_id !== callerOrgId);
   if (otherOrgs.length > 0) {
-    const elevatedElsewhere = otherOrgs.some(
-      (m) => m.role === ORG_ROLES.OWNER || m.role === ORG_ROLES.ADMIN
-    );
-    if (elevatedElsewhere) {
-      return { allowed: false, reason: "forgot_password" };
-    }
+    return { allowed: false, reason: "forgot_password" };
   }
 
   return { allowed: true };

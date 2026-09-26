@@ -11,7 +11,7 @@ Multi-tenant transactional email uses the **Resend** npm SDK server-side only, R
 | `APP_URL` | Public app URL for links (fallback: `NEXT_PUBLIC_APP_URL`) |
 | `CRON_SECRET` | Bearer token for `GET /api/cron/email` |
 | `RESEND_WEBHOOK_SECRET` | Svix secret for `POST /api/webhooks/resend` |
-| `EMAIL_UNSUBSCRIBE_SECRET` | HMAC secret for unsubscribe tokens (fallback: `CRON_SECRET`) |
+| `EMAIL_UNSUBSCRIBE_SECRET` | HMAC secret for unsubscribe tokens (**required** for signing; no fallback) |
 
 ## Migration
 

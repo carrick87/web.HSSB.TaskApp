@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES } from "@/lib/org/roles";
-import { managerCanAccessAssignee } from "@/lib/tasks/manager-assignee-scope";
+import { listUserIdsInManagerScope, EMPTY_ASSIGNEE_SENTINEL } from "@/lib/org/manager-scope";
 import { buildTaskInstancesSheet, sheetToBuffer } from "@/lib/excel";
 
 export async function GET(request: Request) {
@@ -37,16 +37,14 @@ export async function GET(request: Request) {
     .limit(5000);
 
   if (orgCtx.role === ORG_ROLES.MANAGER) {
-    const orFilters: string[] = [];
-    if (orgCtx.branchId) orFilters.push(`branch_id.eq.${orgCtx.branchId}`);
-    if (orgCtx.departmentId) orFilters.push(`department_id.eq.${orgCtx.departmentId}`);
-    const { data: assignees } = await supabase
-      .from("profiles")
-      .select("id")
-      .or(orFilters.length ? orFilters.join(",") : "id.eq.00000000-0000-0000-0000-000000000000");
-    const ids = (assignees ?? []).map((a) => a.id);
+    const ids = await listUserIdsInManagerScope(
+      supabase,
+      orgCtx.orgId,
+      orgCtx.branchId,
+      orgCtx.departmentId
+    );
     if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
   if (branchId) {
     const { data: branchProfiles } = await supabase.from("profiles").select("id").eq("branch_id", branchId);

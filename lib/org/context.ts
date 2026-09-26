@@ -52,7 +52,13 @@ export async function getUserOrganizations(userId: string) {
       .select("org_id, role, status, organizations(id, name, short_name, slug, status)")
       .eq("user_id", userId)
       .eq("status", "active");
-    return data ?? [];
+    return (data ?? []).filter(
+      (row) =>
+        row.organizations &&
+        typeof row.organizations === "object" &&
+        !Array.isArray(row.organizations) &&
+        (row.organizations as { status?: string }).status === "active"
+    );
   } catch {
     return [];
   }
@@ -135,7 +141,17 @@ export async function requireOrgContext(): Promise<OrgContext> {
     .single();
 
   if (!profile) redirect("/login");
-  if (profile.status === "deactivated") redirect("/login?error=deactivated");
+  if (profile.status === "deactivated") {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("organization_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "active");
+    if ((count ?? 0) === 0) {
+      redirect("/login?error=deactivated");
+    }
+  }
 
   const platformAdminFlag = await isPlatformAdmin(supabase);
   const profileWithPlatform = {
@@ -148,9 +164,33 @@ export async function requireOrgContext(): Promise<OrgContext> {
     return { profile: profileWithPlatform, org: active.org, membership: active.membership };
   }
 
-  // Not migrated yet or no org — onboarding
   if (!profile.current_org_id) {
+    const { count: membershipCount } = await supabase
+      .from("organization_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    if ((membershipCount ?? 0) > 0) {
+      redirect("/onboarding/workspace");
+    }
     redirect("/onboarding/workspace");
+  }
+
+  const { data: currentOrg } = await supabase
+    .from("organizations")
+    .select("status")
+    .eq("id", profile.current_org_id)
+    .maybeSingle();
+
+  const { count: membershipCount } = await supabase
+    .from("organization_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if ((membershipCount ?? 0) > 0) {
+    if (currentOrg && currentOrg.status !== "active" && !platformAdminFlag) {
+      redirect("/workspace-suspended");
+    }
+    redirect("/login?error=deactivated");
   }
 
   return legacyOrgContext(profileWithPlatform);

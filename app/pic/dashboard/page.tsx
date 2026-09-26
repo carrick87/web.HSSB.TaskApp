@@ -4,14 +4,13 @@ import { getTodayAppDate } from "@/lib/date";
 import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
 import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
+import { listUserIdsInManagerScope, EMPTY_ASSIGNEE_SENTINEL } from "@/lib/org/manager-scope";
 
 export default async function PicDashboardPage() {
-  const { profile, membership } = await requireOrgContext();
+  const { org, membership } = await requireOrgContext();
   const supabase = await createClient();
   const today = getTodayAppDate();
 
-  const branchId = membership.branch_id ?? profile.branch_id ?? undefined;
-  const deptId = membership.department_id ?? profile.department_id ?? undefined;
   const orgWide = isOrgAdminRole(membership.role);
 
   const baseQuery = supabase
@@ -20,16 +19,14 @@ export default async function PicDashboardPage() {
 
   let query = baseQuery;
   if (membership.role === ORG_ROLES.MANAGER) {
-    const orFilters: string[] = [];
-    if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
-    if (deptId) orFilters.push(`department_id.eq.${deptId}`);
-    const { data: assignees } = await supabase
-      .from("profiles")
-      .select("id")
-      .or(orFilters.length ? orFilters.join(",") : "id.eq.00000000-0000-0000-0000-000000000000");
-    const ids = (assignees ?? []).map((a) => a.id);
+    const ids = await listUserIdsInManagerScope(
+      supabase,
+      org.id,
+      membership.branch_id,
+      membership.department_id
+    );
     if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
 
   const [pendingRes, verifiedTodayRes, lateRes, allRes] = await Promise.all([

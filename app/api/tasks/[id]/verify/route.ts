@@ -27,6 +27,7 @@ export async function POST(
   if (orgCtx.role === ORG_ROLES.MANAGER) {
     const ok = await managerCanAccessAssignee(
       supabase,
+      orgCtx.orgId,
       task.assignee_profile_id,
       orgCtx.branchId,
       orgCtx.departmentId

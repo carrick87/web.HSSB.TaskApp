@@ -42,7 +42,7 @@ Independent RLS harness (229-case matrix): `bash supabase/tests/independent/run_
 
 ## Platform admin bootstrap
 
-Migration `011` ensures the production `admin` user (`78925121…`) is HSSB **owner** and `platform_admins`. All `demo_*` usernames are **members only** (never owner). Re-runs do **not** re-backfill memberships or `current_org_id` once `migration_state` marker `011_hssb_profile_backfill` is set.
+Migration `011` ensures the production `admin` user (`78925121…`) is HSSB **owner** and `platform_admins`. Demo accounts map to org roles as: **`demo_manager` → HSSB manager**; **`demo_admin`** and **`demo_member*`** → **member** (global `profiles.role` is not used for authorization after deploy). Re-runs do **not** re-backfill memberships or `current_org_id` once `migration_state` marker `011_hssb_profile_backfill` is set.
 
 ## Pre-check (run on production **before** `BEGIN`)
 
@@ -90,7 +90,7 @@ JOIN organizations o ON o.id = om.org_id AND o.slug = 'hssb'
 LEFT JOIN platform_admins pa ON pa.user_id = p.id
 WHERE p.username IN ('admin','demo_admin','demo_manager','demo_member1')
 ORDER BY p.username;
--- admin → owner + platform_admin; demo_* → member
+-- admin → owner + platform_admin; demo_manager → manager; demo_admin / demo_member* → member
 ```
 
 Re-run safety:

@@ -32,13 +32,19 @@ export async function getOrgApiContext(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (profile.status === "deactivated") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const orgId = profile.current_org_id as string | null;
   if (!orgId) {
     return NextResponse.json({ error: "No active workspace" }, { status: 403 });
+  }
+
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("status")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  if (!orgRow || orgRow.status !== "active") {
+    return NextResponse.json({ error: "Workspace suspended" }, { status: 403 });
   }
 
   const { data: membership } = await supabase
@@ -50,6 +56,17 @@ export async function getOrgApiContext(
 
   if (membership?.status !== "active" || !membership.role) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (profile.status === "deactivated") {
+    const { count } = await supabase
+      .from("organization_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "active");
+    if ((count ?? 0) === 0) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const role = membership.role as string;

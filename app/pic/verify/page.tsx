@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { ORG_ROLES } from "@/lib/org/roles";
+import { listUserIdsInManagerScope, EMPTY_ASSIGNEE_SENTINEL } from "@/lib/org/manager-scope";
 
 export default async function PicVerifyListPage() {
-  const { profile, membership } = await requireOrgContext();
+  const { org, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   let query = supabase
@@ -26,18 +27,14 @@ export default async function PicVerifyListPage() {
     .order("submitted_at", { ascending: true });
 
   if (membership.role === ORG_ROLES.MANAGER) {
-    const orFilters: string[] = [];
-    const branchId = membership.branch_id ?? profile.branch_id;
-    const deptId = membership.department_id ?? profile.department_id;
-    if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
-    if (deptId) orFilters.push(`department_id.eq.${deptId}`);
-    const { data: assignees } = await supabase
-      .from("profiles")
-      .select("id")
-      .or(orFilters.length ? orFilters.join(",") : "id.eq.00000000-0000-0000-0000-000000000000");
-    const ids = (assignees ?? []).map((a) => a.id);
+    const ids = await listUserIdsInManagerScope(
+      supabase,
+      org.id,
+      membership.branch_id,
+      membership.department_id
+    );
     if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
 
   const { data: tasks } = await query;

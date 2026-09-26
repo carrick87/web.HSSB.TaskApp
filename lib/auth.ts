@@ -50,7 +50,7 @@ export async function getCurrentOrgRole(): Promise<OrgRole | null> {
   if (!profile) return null;
   const active = await getActiveOrganization(profile.id, profile.current_org_id ?? null);
   if (active) return active.membership.role;
-  return legacyOrgContext(profile).membership.role;
+  return null;
 }
 
 /** Maps legacy ProfileRole checks to org membership roles */
@@ -80,7 +80,22 @@ export async function requireAuth() {
 export async function requireProfile() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login?redirect=" + encodeURIComponent("/dashboard"));
-  if (profile.status === "deactivated") {
+  const user = await getCurrentUser();
+  if (user) {
+    const supabase = await createClient();
+    const active = await getActiveOrganization(user.id, profile.current_org_id ?? null);
+    if (active) return profile;
+    if (profile.status === "deactivated") {
+      const { count } = await supabase
+        .from("organization_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "active");
+      if ((count ?? 0) === 0) {
+        redirect("/login?error=deactivated");
+      }
+    }
+  } else if (profile.status === "deactivated") {
     redirect("/login?error=deactivated");
   }
   return profile;

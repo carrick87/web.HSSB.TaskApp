@@ -198,6 +198,8 @@ $$;
 
 REVOKE ALL ON FUNCTION public.task_files_instance_id(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.task_files_org_id(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.task_files_instance_id(TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.task_files_org_id(TEXT) FROM anon;
 GRANT EXECUTE ON FUNCTION public.task_files_instance_id(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.task_files_org_id(TEXT) TO authenticated;
 

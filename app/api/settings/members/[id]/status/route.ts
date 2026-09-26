@@ -5,6 +5,15 @@ import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES } from "@/lib/org/roles";
 import { writeOrgAuditLog } from "@/lib/org/audit";
 
+async function countActiveMemberships(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { count } = await admin
+    .from("organization_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "active");
+  return count ?? 0;
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: targetUserId } = await params;
   const ctx = await getOrgApiContext(true);
@@ -58,8 +67,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const admin = createAdminClient();
+  const activeElsewhere = await countActiveMemberships(admin, targetUserId);
   if (status === "deactivated") {
-    await admin.from("profiles").update({ status: "deactivated" }).eq("id", targetUserId);
+    if (activeElsewhere === 0) {
+      await admin.from("profiles").update({ status: "deactivated" }).eq("id", targetUserId);
+    }
   } else {
     await admin.from("profiles").update({ status: "active" }).eq("id", targetUserId);
   }

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { VerifyActions } from "@/components/tasks/VerifyActions";
 import { FileAnswerView } from "@/components/tasks/FileAnswerView";
-import type { TaskTemplateQuestion } from "@/types/database.types";
+import { managerCanAccessAssignee } from "@/lib/tasks/manager-assignee-scope";
 
 function assigneeDisplay(a: unknown): { username: string; branchName: string; departmentName: string } {
   const raw = Array.isArray(a) ? a[0] : a;
@@ -25,7 +25,7 @@ export default async function PicVerifyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { profile, membership } = await requireOrgContext();
+  const { org, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   const { data: task, error } = await supabase
@@ -58,16 +58,14 @@ export default async function PicVerifyDetailPage({
 
   if (membership.role === ORG_ROLES.MANAGER) {
     const assigneeId = (task as { assignee_profile_id: string }).assignee_profile_id;
-    const branchId = membership.branch_id ?? profile.branch_id;
-    const deptId = membership.department_id ?? profile.department_id;
-    const { data: assigneeProfileData } = await supabase
-      .from("profiles")
-      .select("branch_id, department_id")
-      .eq("id", assigneeId)
-      .single();
-    const sameBranch = branchId && assigneeProfileData?.branch_id === branchId;
-    const sameDept = deptId && assigneeProfileData?.department_id === deptId;
-    if (!sameBranch && !sameDept) notFound();
+    const ok = await managerCanAccessAssignee(
+      supabase,
+      org.id,
+      assigneeId,
+      membership.branch_id,
+      membership.department_id
+    );
+    if (!ok) notFound();
   }
 
   const templateId = Array.isArray(task.template) ? (task.template[0] as { id?: string })?.id : (task.template as { id?: string })?.id;
