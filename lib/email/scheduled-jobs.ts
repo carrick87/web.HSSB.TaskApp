@@ -4,6 +4,12 @@ import { getLocalTimeParts, isEightAmWindow } from "./timezone";
 import { EMAIL_TEMPLATES } from "./templates-keys";
 import { taskUrl } from "./urls";
 import { enqueueDirectEmail } from "./enqueue";
+import {
+  buildDigestTaskRows,
+  countDueToday,
+  shouldSkipDigest,
+} from "./digest";
+import { formatDateInTimezone } from "./format";
 
 function addDays(dateStr: string, days: number) {
   const d = new Date(`${dateStr}T12:00:00Z`);
@@ -20,13 +26,14 @@ export async function runReminderAndDigestJobs() {
 
   const { data: rows } = await admin
     .from("organization_members")
-    .select("org_id, user_id, profiles!inner(id, timezone, email_suppressed, auth_email, harrison_email, username)")
+    .select("org_id, user_id, profiles!inner(id, timezone, date_format, email_suppressed, auth_email, harrison_email, username)")
     .eq("status", "active");
 
   for (const row of rows ?? []) {
     const profile = row.profiles as unknown as {
       id: string;
       timezone: string;
+      date_format: string | null;
       email_suppressed: boolean;
       auth_email: string;
       harrison_email: string | null;
@@ -124,27 +131,22 @@ export async function runReminderAndDigestJobs() {
         .eq("assignee_id", row.user_id)
         .neq("status", "done");
 
-      const openCount = openTasks?.length ?? 0;
-      const overdueCount =
-        openTasks?.filter((t) => t.due_date && String(t.due_date).slice(0, 10) < local.dateStr).length ?? 0;
+      const tasks = openTasks ?? [];
+      const openCount = tasks.length;
+      const overdueCount = tasks.filter(
+        (t) => t.due_date && String(t.due_date).slice(0, 10) < local.dateStr
+      ).length;
+      const dueTodayCount = countDueToday(tasks, local.dateStr);
 
-      const since = new Date(now.getTime() - (runWeekly ? 7 : 1) * 86400000).toISOString();
-      const { data: events } = await admin
-        .from("notification_events")
-        .select("event_type, payload, created_at")
-        .eq("org_id", row.org_id)
-        .eq("user_id", row.user_id)
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(8);
+      if (shouldSkipDigest(openCount, overdueCount)) continue;
 
-      const activityLines =
-        events?.map((e) => {
-          const p = e.payload as { inAppBody?: string; title?: string };
-          return p.inAppBody ?? p.title ?? e.event_type.replace(/_/g, " ");
-        }) ?? [];
-
-      if (openCount === 0 && activityLines.length === 0) continue;
+      const dateFormat = profile.date_format ?? "DD/MM/YYYY";
+      const digestTasks = buildDigestTaskRows(
+        tasks,
+        local.dateStr,
+        taskUrl,
+        (iso) => formatDateInTimezone(iso, tz, dateFormat)
+      );
 
       await enqueueDirectEmail({
         orgId: row.org_id,
@@ -154,8 +156,10 @@ export async function runReminderAndDigestJobs() {
           recipientUserId: row.user_id,
           frequency: runWeekly ? "Weekly" : "Daily",
           openCount,
+          dueTodayCount,
           overdueCount,
-          activityLines,
+          summaryDate: local.dateStr,
+          tasks: digestTasks,
           dashboardUrl: `${config.appUrl}/dashboard`,
         },
         idempotencyKey: digestKey,

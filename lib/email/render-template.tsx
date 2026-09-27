@@ -1,17 +1,24 @@
 import * as React from "react";
-import { Heading, Text } from "@react-email/components";
 import { render } from "@react-email/render";
-import { PRODUCT_POSTAL_ADDRESS } from "@/src/config/product";
 import { emailProductDisplayName } from "@/lib/email/format";
 import {
   EmailShell,
-  OpenTaskButton,
+  EmailHeading,
+  EmailParagraph,
+  EmailButton,
+  DigestStatsRow,
+  DigestTaskRow as DigestTaskRowBlock,
   QuoteBlock,
   TaskDetailsTable,
   defaultFooter,
+  orgPostalLine,
   type OrgEmailBranding,
 } from "@/lib/email/components";
-import { formatDateInTimezone } from "@/lib/email/format";
+import {
+  buildDigestPreheader,
+  type DigestTaskRow,
+} from "@/lib/email/digest";
+import { formatDateInTimezone, localeForDateFormat } from "@/lib/email/format";
 
 export type { OrgEmailBranding };
 
@@ -25,31 +32,28 @@ export type TemplateRenderContext = {
   productName: string;
 };
 
-const pStyle = { fontSize: "15px", lineHeight: "22px", color: "#44546f", margin: "0 0 16px" };
-const h1Style = { fontSize: "20px", fontWeight: 600, color: "#172b4d", margin: "0 0 16px" };
-
-function postalFallback(ctx: TemplateRenderContext) {
-  return `${ctx.productName} · ${PRODUCT_POSTAL_ADDRESS}`;
-}
-
-function postal(branding: OrgEmailBranding, ctx: TemplateRenderContext) {
-  return branding.postalAddress?.trim() || postalFallback(ctx);
-}
-
 function ctxFooter(
   branding: OrgEmailBranding,
   ctx: TemplateRenderContext,
   reason: string,
-  opts?: { requirePostal?: boolean; unsubscribe?: boolean }
+  opts?: { unsubscribe?: boolean; unsubscribeLabel?: string }
 ) {
   return defaultFooter({
     appUrl: ctx.appUrl,
     orgId: branding.orgId,
     reason,
     unsubscribeUrl: opts?.unsubscribe === false ? undefined : ctx.unsubscribeUrl,
-    postalAddress: postal(branding, ctx),
-    requirePostal: opts?.requirePostal,
+    unsubscribeLabel: opts?.unsubscribeLabel,
+    postalLine: orgPostalLine(branding),
   });
+}
+
+function formatSummaryDateLine(dateStr: string, timeZone: string, dateFormat: string): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  const locale = localeForDateFormat(dateFormat);
+  const weekday = new Intl.DateTimeFormat(locale, { timeZone, weekday: "long" }).format(d);
+  const datePart = formatDateInTimezone(dateStr, timeZone, dateFormat);
+  return `${weekday}, ${datePart}`;
 }
 
 function renderActivityLine(line: string) {
@@ -74,9 +78,9 @@ function renderActivityLine(line: string) {
     );
   }
   return (
-    <Text key={line} style={pStyle}>
+    <EmailParagraph key={line}>
       • {line}
-    </Text>
+    </EmailParagraph>
   );
 }
 
@@ -99,11 +103,11 @@ export async function renderWorkspaceInvite(props: {
         unsubscribe: false,
       })}
     >
-      <Heading style={h1Style}>Join {props.branding.orgName}</Heading>
-      <Text style={pStyle}>
+      <EmailHeading>Join {props.branding.orgName}</EmailHeading>
+      <EmailParagraph>
         {props.inviterName} invited you as {props.roleLabel}. Accept to start collaborating on tasks and projects.
-      </Text>
-      <OpenTaskButton href={props.acceptUrl} label="Accept invitation" />
+      </EmailParagraph>
+      <EmailButton href={props.acceptUrl} label="Accept invitation" />
     </EmailShell>
   );
   return { subject, html, text: `${subject}\n\n${preheader}\n\nAccept: ${props.acceptUrl}`, preheader };
@@ -126,11 +130,11 @@ export async function renderWelcomeWorkspace(props: {
         unsubscribe: false,
       })}
     >
-      <Heading style={h1Style}>Your workspace is ready</Heading>
-      <Text style={pStyle}>
+      <EmailHeading>Your workspace is ready</EmailHeading>
+      <EmailParagraph>
         Hi {props.ownerName}, {props.branding.orgName} is set up on {props.ctx.productName}.
-      </Text>
-      <OpenTaskButton href={props.dashboardUrl} label="Open workspace" />
+      </EmailParagraph>
+      <EmailButton href={props.dashboardUrl} label="Open workspace" />
     </EmailShell>
   );
   return { subject, html, text: `${subject}\n\n${props.dashboardUrl}`, preheader };
@@ -151,9 +155,9 @@ export async function renderInviteAccepted(props: {
       productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you sent a workspace invite.")}
     >
-      <Heading style={h1Style}>Invitation accepted</Heading>
-      <Text style={pStyle}>{props.inviteeName} accepted your invite and is now a member.</Text>
-      <OpenTaskButton href={props.membersUrl} label="View members" />
+      <EmailHeading>Invitation accepted</EmailHeading>
+      <EmailParagraph>{props.inviteeName} accepted your invite and is now a member.</EmailParagraph>
+      <EmailButton href={props.membersUrl} label="View members" />
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -175,9 +179,9 @@ export async function renderRoleChanged(props: {
       productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because your membership changed.")}
     >
-      <Heading style={h1Style}>Role updated</Heading>
-      <Text style={pStyle}>Your role is now {props.newRole}.</Text>
-      <OpenTaskButton href={props.settingsUrl} label="Open workspace" />
+      <EmailHeading>Role updated</EmailHeading>
+      <EmailParagraph>Your role is now {props.newRole}.</EmailParagraph>
+      <EmailButton href={props.settingsUrl} label="Open workspace" />
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -200,9 +204,9 @@ export async function renderRemovedFromWorkspace(props: {
         unsubscribe: false,
       })}
     >
-      <Heading style={h1Style}>Access removed</Heading>
-      <Text style={pStyle}>Contact an admin if you think this is a mistake.</Text>
-      <OpenTaskButton href={props.supportUrl} label="Contact support" />
+      <EmailHeading>Access removed</EmailHeading>
+      <EmailParagraph>Contact an admin if you think this is a mistake.</EmailParagraph>
+      <EmailButton href={props.supportUrl} label="Contact support" />
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -241,7 +245,7 @@ export async function renderTaskActivity(props: {
         assignee={props.assigneeName}
       />
       {props.lines.map((line) => renderActivityLine(line))}
-      <OpenTaskButton href={props.taskUrl} />
+      <EmailButton href={props.taskUrl} label="Open task" />
     </EmailShell>
   );
   const text = `${subject}\n\n${props.lines.join("\n")}\n\n${props.taskUrl}`;
@@ -261,17 +265,15 @@ export async function renderTaskReminders(props: {
       branding={props.branding}
       preview={preheader}
       productName={props.ctx.productName}
-      footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you have assigned tasks due.", {
-        requirePostal: false,
-      })}
+      footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you have assigned tasks due.")}
     >
-      <Heading style={h1Style}>{subject}</Heading>
+      <EmailHeading>{subject}</EmailHeading>
       {props.tasks.map((t) => (
-        <Text key={t.url} style={pStyle}>
+        <EmailParagraph key={t.url}>
           {t.title} — {t.dueLabel}
-        </Text>
+        </EmailParagraph>
       ))}
-      <OpenTaskButton href={props.tasks[0]?.url ?? props.ctx.appUrl} label="View tasks" />
+      <EmailButton href={props.tasks[0]?.url ?? props.ctx.appUrl} label="View tasks" />
     </EmailShell>
   );
   return { subject, html, text: `${subject}\n\n${preheader}`, preheader };
@@ -282,34 +284,54 @@ export async function renderDigest(props: {
   ctx: TemplateRenderContext;
   frequency: string;
   openCount: number;
+  dueTodayCount: number;
   overdueCount: number;
-  activityLines: string[];
+  summaryDate: string;
+  tasks: DigestTaskRow[];
   dashboardUrl: string;
 }): Promise<RenderedEmail> {
+  const freqLower = props.frequency.toLowerCase();
   const subject = `${props.frequency} digest: ${props.openCount} open, ${props.overdueCount} overdue`;
-  const preheader = props.activityLines.slice(0, 3).join(" · ") || "Your task summary for this workspace.";
+  const summaryDateLabel = formatSummaryDateLine(props.summaryDate, props.ctx.timezone, props.ctx.dateFormat);
+  const preheader = buildDigestPreheader({
+    dueTodayCount: props.dueTodayCount,
+    overdueCount: props.overdueCount,
+    summaryDateLabel,
+  });
+  const digestReason = `You're getting this because ${freqLower} summaries are on for your account in ${props.branding.orgName}.`;
   const html = await render(
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      preheader={preheader}
       productName={props.ctx.productName}
-      footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you subscribed to task digests.", {
-        requirePostal: true,
+      footer={ctxFooter(props.branding, props.ctx, digestReason, {
+        unsubscribeLabel: "Unsubscribe from summaries",
       })}
     >
-      <Heading style={h1Style}>Your {props.frequency} summary</Heading>
-      <Text style={pStyle}>
-        {props.openCount} open tasks · {props.overdueCount} overdue
-      </Text>
-      {props.activityLines.map((line) => (
-        <Text key={line} style={pStyle}>
-          • {line}
-        </Text>
+      <EmailHeading>{`Your ${freqLower} summary`}</EmailHeading>
+      <EmailParagraph muted>{summaryDateLabel}</EmailParagraph>
+      <DigestStatsRow
+        openCount={props.openCount}
+        dueTodayCount={props.dueTodayCount}
+        overdueCount={props.overdueCount}
+      />
+      {props.tasks.map((t, i) => (
+        <DigestTaskRowBlock
+          key={t.url}
+          title={t.title}
+          url={t.url}
+          dueKind={t.dueKind}
+          dueDateFormatted={t.dueDateFormatted}
+          statusLabel={t.statusLabel}
+          metaSuffix={t.metaSuffix}
+          isLast={i === props.tasks.length - 1}
+        />
       ))}
-      <OpenTaskButton href={props.dashboardUrl} label="Open dashboard" />
+      <EmailButton href={props.dashboardUrl} label="Open my tasks" />
     </EmailShell>
   );
-  return { subject, html, text: subject, preheader };
+  return { subject, html, text: `${subject}\n\n${preheader}\n\n${props.dashboardUrl}`, preheader };
 }
 
 export async function renderAccountDeleted(props: {
@@ -322,7 +344,7 @@ export async function renderAccountDeleted(props: {
       branding={{
         orgId: "account",
         orgName: props.ctx.productName,
-        postalAddress: PRODUCT_POSTAL_ADDRESS,
+        postalAddress: null,
       }}
       preview={preheader}
       productName={props.ctx.productName}
@@ -330,14 +352,13 @@ export async function renderAccountDeleted(props: {
         appUrl: props.ctx.appUrl,
         orgId: "account",
         reason: "You're receiving this because you deleted your account.",
-        postalAddress: postalFallback(props.ctx),
-        requirePostal: true,
+        postalLine: null,
       })}
     >
-      <Heading style={h1Style}>Account deleted</Heading>
-      <Text style={pStyle}>
+      <EmailHeading>Account deleted</EmailHeading>
+      <EmailParagraph>
         Your {props.ctx.productName} account and personal data have been removed as requested.
-      </Text>
+      </EmailParagraph>
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -359,8 +380,8 @@ export async function renderWorkspaceSuspended(props: {
         unsubscribe: false,
       })}
     >
-      <Heading style={h1Style}>Workspace suspended</Heading>
-      <Text style={pStyle}>{preheader}</Text>
+      <EmailHeading>Workspace suspended</EmailHeading>
+      <EmailParagraph>{preheader}</EmailParagraph>
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -382,9 +403,9 @@ export async function renderWorkspaceReactivated(props: {
         unsubscribe: false,
       })}
     >
-      <Heading style={h1Style}>Workspace reactivated</Heading>
-      <Text style={pStyle}>You can sign in and continue working.</Text>
-      <OpenTaskButton href={props.dashboardUrl} label="Open workspace" />
+      <EmailHeading>Workspace reactivated</EmailHeading>
+      <EmailParagraph>You can sign in and continue working.</EmailParagraph>
+      <EmailButton href={props.dashboardUrl} label="Open workspace" />
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -475,8 +496,10 @@ export async function renderEmailTemplate(input: TemplateRenderInput): Promise<R
         ctx,
         frequency: String(p.frequency ?? "Daily"),
         openCount: Number(p.openCount ?? 0),
+        dueTodayCount: Number(p.dueTodayCount ?? 0),
         overdueCount: Number(p.overdueCount ?? 0),
-        activityLines: (p.activityLines as string[]) ?? [],
+        summaryDate: String(p.summaryDate ?? new Date().toISOString().slice(0, 10)),
+        tasks: (p.tasks as DigestTaskRow[]) ?? [],
         dashboardUrl: String(p.dashboardUrl ?? input.appUrl),
       });
     case "account_deleted":
