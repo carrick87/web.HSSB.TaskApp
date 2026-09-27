@@ -3,6 +3,8 @@ export type DateFormatPref = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 /** Product label in email From headers when EMAIL_FROM has no display name. */
 export const EMAIL_PRODUCT_NAME_FALLBACK = "HAR TaskApp";
 
+const CONTROL_AND_SEPARATOR_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
+
 export function localeForDateFormat(format: string) {
   if (format === "MM/DD/YYYY") return "en-US";
   if (format === "YYYY-MM-DD") return "sv-SE";
@@ -58,24 +60,24 @@ export function emailProductDisplayName(emailFromEnv: string) {
 }
 
 export function sanitizeOrgNameForHeader(orgName: string) {
-  return orgName.replace(/[\r\n]+/g, " ").replace(/[<>"]/g, "").trim();
+  return orgName
+    .replace(CONTROL_AND_SEPARATOR_CHARS, " ")
+    .replace(/[<>"]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/** Quote a display-name atom per RFC 5322 when it contains specials. */
-export function quoteRfc5322DisplayNameAtom(name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) return '""';
-  const needsQuotes = /[,;\\"]/.test(trimmed) || /[^\x20-\x7E]/.test(trimmed);
-  if (!needsQuotes) return trimmed;
-  return `"${trimmed.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+/** RFC 5322 quoted-string for a full display name (org via product). */
+export function quoteRfc5322DisplayName(displayName: string) {
+  return `"${displayName.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 export function buildWorkspaceFromHeader(orgName: string, emailFromEnv: string) {
   const { email } = parseFromAddress(emailFromEnv);
   const productName = emailProductDisplayName(emailFromEnv);
-  const org = quoteRfc5322DisplayNameAtom(sanitizeOrgNameForHeader(orgName));
+  const org = sanitizeOrgNameForHeader(orgName) || "Workspace";
   const displayName = `${org} via ${productName}`;
-  return `${displayName} <${email}>`;
+  return `${quoteRfc5322DisplayName(displayName)} <${email}>`;
 }
 
 export function mailDomainFromFrom(emailFromEnv: string) {

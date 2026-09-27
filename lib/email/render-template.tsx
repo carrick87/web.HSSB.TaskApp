@@ -28,8 +28,12 @@ export type TemplateRenderContext = {
 const pStyle = { fontSize: "15px", lineHeight: "22px", color: "#44546f", margin: "0 0 16px" };
 const h1Style = { fontSize: "20px", fontWeight: 600, color: "#172b4d", margin: "0 0 16px" };
 
-function postal(branding: OrgEmailBranding) {
-  return branding.postalAddress?.trim() || PRODUCT_POSTAL_ADDRESS;
+function postalFallback(ctx: TemplateRenderContext) {
+  return `${ctx.productName} · ${PRODUCT_POSTAL_ADDRESS}`;
+}
+
+function postal(branding: OrgEmailBranding, ctx: TemplateRenderContext) {
+  return branding.postalAddress?.trim() || postalFallback(ctx);
 }
 
 function ctxFooter(
@@ -43,7 +47,7 @@ function ctxFooter(
     orgId: branding.orgId,
     reason,
     unsubscribeUrl: opts?.unsubscribe === false ? undefined : ctx.unsubscribeUrl,
-    postalAddress: postal(branding),
+    postalAddress: postal(branding, ctx),
     requirePostal: opts?.requirePostal,
   });
 }
@@ -326,7 +330,7 @@ export async function renderAccountDeleted(props: {
         appUrl: props.ctx.appUrl,
         orgId: "account",
         reason: "You're receiving this because you deleted your account.",
-        postalAddress: PRODUCT_POSTAL_ADDRESS,
+        postalAddress: postalFallback(props.ctx),
         requirePostal: true,
       })}
     >

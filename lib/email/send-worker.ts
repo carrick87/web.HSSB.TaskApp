@@ -10,6 +10,8 @@ import {
   outboundMessageId,
   taskThreadRootMessageId,
 } from "./format";
+import { parseOrganizationReplyTo } from "./reply-to";
+import { isRecipientEmailSuppressed } from "./suppression";
 
 const MAX_ATTEMPTS = 5;
 
@@ -32,7 +34,7 @@ async function loadOrgBranding(admin: ReturnType<typeof createAdminClient>, orgI
     .select("id, name, logo_wide_path, address, email")
     .eq("id", orgId)
     .single();
-  const contactEmail = data?.email?.trim() || null;
+  const contactEmail = parseOrganizationReplyTo(data?.email) ?? null;
   return {
     orgId: data?.id ?? orgId,
     orgName: data?.name ?? "Workspace",
@@ -129,6 +131,14 @@ export async function processEmailOutbox(limit = 40) {
 
   for (const row of merged) {
     await admin.from("email_outbox").update({ status: "processing" }).eq("id", row.id);
+
+    if (await isRecipientEmailSuppressed(admin, row.recipient_email)) {
+      await admin
+        .from("email_outbox")
+        .update({ status: "suppressed", error: "recipient_suppressed" })
+        .eq("id", row.id);
+      continue;
+    }
 
     const recipientUserId = row.payload.recipientUserId as string | undefined;
     const unsubscribeUrl =

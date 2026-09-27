@@ -27,10 +27,12 @@ export function extractResendWebhookRecipientEmails(
   return fallback ? [fallback] : [];
 }
 
+import { escapeIlikeExact } from "@/lib/email/suppression";
+
 type ProfileSuppressionClient = {
   from: (table: string) => {
     update: (patch: Record<string, unknown>) => {
-      eq: (column: string, value: string) => unknown;
+      ilike: (column: string, value: string) => unknown;
     };
   };
 };
@@ -45,7 +47,8 @@ export async function suppressProfilesForEmail(
     email_suppression_reason: suppressionReason,
   };
   for (const email of emails) {
-    await admin.from("profiles").update(patch).eq("auth_email", email);
-    await admin.from("profiles").update(patch).eq("harrison_email", email);
+    const pattern = escapeIlikeExact(email);
+    await admin.from("profiles").update(patch).ilike("auth_email", pattern);
+    await admin.from("profiles").update(patch).ilike("harrison_email", pattern);
   }
 }

@@ -6,14 +6,18 @@ import {
 } from "./resend-webhook";
 
 describe("extractResendWebhookRecipientEmails", () => {
-  it("reads email.bounced payload with data.to array", () => {
+  it("reads email.bounced payload with Resend Permanent/Suppressed bounce", () => {
     const data = {
       created_at: "2024-04-01T10:00:00.000Z",
       email_id: "e7a7c4d2-1234-5678-9abc-def012345678",
       from: "notifications@carrick.my",
       to: ["member@example.com"],
       subject: "Fix loading bay door",
-      bounce: { message: "550 5.1.1 User unknown", type: "hard" },
+      bounce: {
+        message: "The email address is on the suppression list",
+        type: "Permanent",
+        subType: "Suppressed",
+      },
     };
     assert.deepEqual(extractResendWebhookRecipientEmails(data), ["member@example.com"]);
   });
@@ -50,12 +54,12 @@ describe("extractResendWebhookRecipientEmails", () => {
 });
 
 describe("suppressProfilesForEmail", () => {
-  it("updates auth_email and harrison_email for each recipient", async () => {
+  it("updates auth_email and harrison_email with case-insensitive ilike", async () => {
     const calls: { column: string; value: string }[] = [];
     const admin = {
       from: () => ({
         update: () => ({
-          eq: async (column: string, value: string) => {
+          ilike: async (column: string, value: string) => {
             calls.push({ column, value });
           },
         }),
