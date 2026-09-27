@@ -56,7 +56,7 @@ Visit **`/email-preview`** in development to render all templates (used for scre
 - **Preheader** (`Preview`) on every template.
 - **Task emails** use a 600px white card, logo on white, details table, quoted comments, 44px `#0052CC` HTML button, plain-text part.
 - **Threading**: `In-Reply-To` / `References` → `<task-{taskId}@{domain}>`, unique `Message-ID` per send.
-- **Footer**: reason line, manage notifications + unsubscribe links, org postal address (fallback `PRODUCT_POSTAL_ADDRESS` in `src/config/product.ts`; required on digests).
+- **Footer**: reason line, notification settings + unsubscribe links, org postal address when set on the workspace (`organizations.address`), and “Sent by {product from EMAIL_FROM}”.
 - **Dates**: recipient `timezone` + `date_format` on profile (default `DD/MM/YYYY`, `Asia/Kuching`).
 - **Settings grid**: `/settings/notifications` — rows Invites / Task activity / Reminders / Security × Email / In-app / Push (push disabled).
 
