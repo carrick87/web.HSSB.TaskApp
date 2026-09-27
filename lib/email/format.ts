@@ -1,6 +1,9 @@
-import { PRODUCT_NAME } from "@/src/config/product";
-
 export type DateFormatPref = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
+
+/** Product label in email From headers when EMAIL_FROM has no display name. */
+export const EMAIL_PRODUCT_NAME_FALLBACK = "HAR TaskApp";
+
+const CONTROL_AND_SEPARATOR_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 
 export function localeForDateFormat(format: string) {
   if (format === "MM/DD/YYYY") return "en-US";
@@ -46,13 +49,41 @@ export function formatDateTimeInTimezone(
 export function parseFromAddress(from: string) {
   const match = from.match(/^(.+?)\s*<([^>]+)>$/);
   if (match) return { name: match[1].trim(), email: match[2].trim() };
-  return { name: PRODUCT_NAME, email: from.trim() };
+  return { name: EMAIL_PRODUCT_NAME_FALLBACK, email: from.trim() };
+}
+
+/** Display name from EMAIL_FROM (e.g. `HAR TaskApp`); not the workspace suffix. */
+export function emailProductDisplayName(emailFromEnv: string) {
+  const match = emailFromEnv.match(/^(.+?)\s*<([^>]+)>$/);
+  if (match) {
+    let name = match[1].trim();
+    if (name.length >= 2 && name.startsWith('"') && name.endsWith('"')) {
+      name = name.slice(1, -1).trim();
+    }
+    return name;
+  }
+  return EMAIL_PRODUCT_NAME_FALLBACK;
+}
+
+export function sanitizeOrgNameForHeader(orgName: string) {
+  return orgName
+    .replace(CONTROL_AND_SEPARATOR_CHARS, " ")
+    .replace(/[<>"]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** RFC 5322 quoted-string for a full display name (org via product). */
+export function quoteRfc5322DisplayName(displayName: string) {
+  return `"${displayName.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 export function buildWorkspaceFromHeader(orgName: string, emailFromEnv: string) {
   const { email } = parseFromAddress(emailFromEnv);
-  const displayName = `${orgName} via ${PRODUCT_NAME}`;
-  return `${displayName} <${email}>`;
+  const productName = emailProductDisplayName(emailFromEnv);
+  const org = sanitizeOrgNameForHeader(orgName) || "Workspace";
+  const displayName = `${org} via ${productName}`;
+  return `${quoteRfc5322DisplayName(displayName)} <${email}>`;
 }
 
 export function mailDomainFromFrom(emailFromEnv: string) {

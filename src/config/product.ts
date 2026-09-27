@@ -21,7 +21,7 @@ export const PRODUCT_BACKGROUND_COLOR = "#F7F8F9";
 
 /** Fallback postal address in email footers when org has none. */
 export const PRODUCT_POSTAL_ADDRESS =
-  "TaskApp · Level 1, Example Tower, 123 Example Street, Kuala Lumpur, Malaysia";
+  "Level 1, Example Tower, 123 Example Street, Kuala Lumpur, Malaysia";
 
 export function productPageTitle(suffix?: string) {
   if (!suffix) return PRODUCT_NAME;

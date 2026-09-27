@@ -10,27 +10,35 @@ import {
   outboundMessageId,
   taskThreadRootMessageId,
 } from "./format";
+import { parseOrganizationReplyTo } from "./reply-to";
+import { lookupRecipientSuppression } from "./suppression";
+import { applySuppressionLookupToOutbox } from "./outbox-suppression";
+import { emailOutboxBackoffMs, MAX_EMAIL_OUTBOX_ATTEMPTS } from "./retry";
 
-const MAX_ATTEMPTS = 5;
-
-function backoffMs(attempts: number) {
-  return Math.min(60_000 * 2 ** attempts, 30 * 60_000);
-}
+const MAX_ATTEMPTS = MAX_EMAIL_OUTBOX_ATTEMPTS;
 
 async function loadOrgBranding(admin: ReturnType<typeof createAdminClient>, orgId: string | null) {
   if (!orgId) {
-    return { orgId: "unknown", orgName: "Workspace", logoWidePath: null, postalAddress: null as string | null };
+    return {
+      orgId: "unknown",
+      orgName: "Workspace",
+      logoWidePath: null,
+      postalAddress: null as string | null,
+      contactEmail: null as string | null,
+    };
   }
   const { data } = await admin
     .from("organizations")
-    .select("id, name, logo_wide_path, address")
+    .select("id, name, logo_wide_path, address, email")
     .eq("id", orgId)
     .single();
+  const contactEmail = parseOrganizationReplyTo(data?.email) ?? null;
   return {
     orgId: data?.id ?? orgId,
     orgName: data?.name ?? "Workspace",
     logoWidePath: data?.logo_wide_path ?? null,
     postalAddress: data?.address ?? null,
+    contactEmail,
   };
 }
 
@@ -122,6 +130,10 @@ export async function processEmailOutbox(limit = 40) {
   for (const row of merged) {
     await admin.from("email_outbox").update({ status: "processing" }).eq("id", row.id);
 
+    const suppressionStatus = await lookupRecipientSuppression(admin, row.recipient_email);
+    const maySend = await applySuppressionLookupToOutbox(admin, row, suppressionStatus);
+    if (!maySend) continue;
+
     const recipientUserId = row.payload.recipientUserId as string | undefined;
     const unsubscribeUrl =
       recipientUserId && row.org_id && !row.mandatory
@@ -135,6 +147,7 @@ export async function processEmailOutbox(limit = 40) {
       payload: row.payload as Record<string, unknown>,
       branding,
       appUrl: config.appUrl,
+      emailFrom: config.from,
       unsubscribeUrl,
       timezone: locale.timezone,
       dateFormat: locale.dateFormat,
@@ -177,21 +190,33 @@ export async function processEmailOutbox(limit = 40) {
       continue;
     }
 
-    const { data, error } = await resend.emails.send(
-      {
-        from,
-        to: row.recipient_email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        headers,
-      },
-      { idempotencyKey: row.idempotency_key ?? row.id }
-    );
+    const sendPayload: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+      text: string;
+      headers: Record<string, string>;
+      replyTo?: string;
+    } = {
+      from,
+      to: row.recipient_email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      headers,
+    };
+    if (branding.contactEmail) {
+      sendPayload.replyTo = branding.contactEmail;
+    }
+
+    const { data, error } = await resend.emails.send(sendPayload, {
+      idempotencyKey: row.idempotency_key ?? row.id,
+    });
 
     if (error) {
       const attempts = (row.attempts ?? 0) + 1;
-      const retryAt = new Date(Date.now() + backoffMs(attempts)).toISOString();
+      const retryAt = new Date(Date.now() + emailOutboxBackoffMs(attempts)).toISOString();
       await admin
         .from("email_outbox")
         .update({

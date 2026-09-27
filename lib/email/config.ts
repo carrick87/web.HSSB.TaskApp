@@ -1,9 +1,9 @@
-import { PRODUCT_NAME } from "@/src/config/product";
+import { EMAIL_PRODUCT_NAME_FALLBACK } from "@/lib/email/format";
 
 export function getEmailConfig() {
   return {
     apiKey: process.env.RESEND_API_KEY ?? "",
-    from: process.env.EMAIL_FROM ?? `${PRODUCT_NAME} <notifications@example.com>`,
+    from: process.env.EMAIL_FROM ?? `${EMAIL_PRODUCT_NAME_FALLBACK} <notifications@example.com>`,
     appUrl: (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
     cronSecret: process.env.CRON_SECRET ?? "",
     webhookSecret: process.env.RESEND_WEBHOOK_SECRET ?? "",

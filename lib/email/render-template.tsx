@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Heading, Text } from "@react-email/components";
 import { render } from "@react-email/render";
-import { PRODUCT_NAME, PRODUCT_POSTAL_ADDRESS } from "@/src/config/product";
+import { PRODUCT_POSTAL_ADDRESS } from "@/src/config/product";
+import { emailProductDisplayName } from "@/lib/email/format";
 import {
   EmailShell,
   OpenTaskButton,
@@ -21,13 +22,18 @@ export type TemplateRenderContext = {
   dateFormat: string;
   appUrl: string;
   unsubscribeUrl?: string;
+  productName: string;
 };
 
 const pStyle = { fontSize: "15px", lineHeight: "22px", color: "#44546f", margin: "0 0 16px" };
 const h1Style = { fontSize: "20px", fontWeight: 600, color: "#172b4d", margin: "0 0 16px" };
 
-function postal(branding: OrgEmailBranding) {
-  return branding.postalAddress?.trim() || PRODUCT_POSTAL_ADDRESS;
+function postalFallback(ctx: TemplateRenderContext) {
+  return `${ctx.productName} · ${PRODUCT_POSTAL_ADDRESS}`;
+}
+
+function postal(branding: OrgEmailBranding, ctx: TemplateRenderContext) {
+  return branding.postalAddress?.trim() || postalFallback(ctx);
 }
 
 function ctxFooter(
@@ -41,7 +47,7 @@ function ctxFooter(
     orgId: branding.orgId,
     reason,
     unsubscribeUrl: opts?.unsubscribe === false ? undefined : ctx.unsubscribeUrl,
-    postalAddress: postal(branding),
+    postalAddress: postal(branding, ctx),
     requirePostal: opts?.requirePostal,
   });
 }
@@ -88,6 +94,7 @@ export async function renderWorkspaceInvite(props: {
       branding={props.branding}
       preview={preheader}
       preheader={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you were invited to this workspace.", {
         unsubscribe: false,
       })}
@@ -109,18 +116,19 @@ export async function renderWelcomeWorkspace(props: {
   dashboardUrl: string;
 }): Promise<RenderedEmail> {
   const subject = `${props.ownerName}, your workspace ${props.branding.orgName} is ready`;
-  const preheader = `Get started on ${PRODUCT_NAME} — invite teammates or create your first task.`;
+  const preheader = `Get started on ${props.ctx.productName} — invite teammates or create your first task.`;
   const html = await render(
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you created this workspace.", {
         unsubscribe: false,
       })}
     >
       <Heading style={h1Style}>Your workspace is ready</Heading>
       <Text style={pStyle}>
-        Hi {props.ownerName}, {props.branding.orgName} is set up on {PRODUCT_NAME}.
+        Hi {props.ownerName}, {props.branding.orgName} is set up on {props.ctx.productName}.
       </Text>
       <OpenTaskButton href={props.dashboardUrl} label="Open workspace" />
     </EmailShell>
@@ -140,6 +148,7 @@ export async function renderInviteAccepted(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you sent a workspace invite.")}
     >
       <Heading style={h1Style}>Invitation accepted</Heading>
@@ -163,6 +172,7 @@ export async function renderRoleChanged(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because your membership changed.")}
     >
       <Heading style={h1Style}>Role updated</Heading>
@@ -185,6 +195,7 @@ export async function renderRemovedFromWorkspace(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because your workspace access changed.", {
         unsubscribe: false,
       })}
@@ -216,6 +227,7 @@ export async function renderTaskActivity(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(
         props.branding,
         props.ctx,
@@ -248,6 +260,7 @@ export async function renderTaskReminders(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you have assigned tasks due.", {
         requirePostal: false,
       })}
@@ -279,6 +292,7 @@ export async function renderDigest(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this because you subscribed to task digests.", {
         requirePostal: true,
       })}
@@ -305,18 +319,25 @@ export async function renderAccountDeleted(props: {
   const preheader = "This confirms your account and personal data were removed.";
   const html = await render(
     <EmailShell
-      branding={{ orgId: "account", orgName: PRODUCT_NAME, postalAddress: PRODUCT_POSTAL_ADDRESS }}
+      branding={{
+        orgId: "account",
+        orgName: props.ctx.productName,
+        postalAddress: PRODUCT_POSTAL_ADDRESS,
+      }}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={defaultFooter({
         appUrl: props.ctx.appUrl,
         orgId: "account",
         reason: "You're receiving this because you deleted your account.",
-        postalAddress: PRODUCT_POSTAL_ADDRESS,
+        postalAddress: postalFallback(props.ctx),
         requirePostal: true,
       })}
     >
       <Heading style={h1Style}>Account deleted</Heading>
-      <Text style={pStyle}>Your {PRODUCT_NAME} account and personal data have been removed as requested.</Text>
+      <Text style={pStyle}>
+        Your {props.ctx.productName} account and personal data have been removed as requested.
+      </Text>
     </EmailShell>
   );
   return { subject, html, text: subject, preheader };
@@ -333,6 +354,7 @@ export async function renderWorkspaceSuspended(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this for account security.", {
         unsubscribe: false,
       })}
@@ -355,6 +377,7 @@ export async function renderWorkspaceReactivated(props: {
     <EmailShell
       branding={props.branding}
       preview={preheader}
+      productName={props.ctx.productName}
       footer={ctxFooter(props.branding, props.ctx, "You're receiving this for account security.", {
         unsubscribe: false,
       })}
@@ -372,6 +395,7 @@ export type TemplateRenderInput = {
   payload: Record<string, unknown>;
   branding: OrgEmailBranding;
   appUrl: string;
+  emailFrom?: string;
   unsubscribeUrl?: string;
   timezone?: string;
   dateFormat?: string;
@@ -380,11 +404,13 @@ export type TemplateRenderInput = {
 export async function renderEmailTemplate(input: TemplateRenderInput): Promise<RenderedEmail> {
   const p = input.payload;
   const branding = input.branding;
+  const emailFrom = input.emailFrom ?? process.env.EMAIL_FROM ?? "";
   const ctx: TemplateRenderContext = {
     appUrl: input.appUrl,
     unsubscribeUrl: input.unsubscribeUrl ?? (p.unsubscribeUrl as string | undefined),
     timezone: input.timezone ?? "Asia/Kuching",
     dateFormat: input.dateFormat ?? "DD/MM/YYYY",
+    productName: emailProductDisplayName(emailFrom),
   };
 
   switch (input.template) {
