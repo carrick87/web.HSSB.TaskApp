@@ -1,5 +1,5 @@
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { emailOutboxBackoffMs } from "@/lib/email/retry";
+import { emailOutboxBackoffMs, MAX_EMAIL_OUTBOX_ATTEMPTS } from "@/lib/email/retry";
 import type { RecipientSuppressionStatus } from "@/lib/email/suppression";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -27,10 +27,11 @@ export async function applySuppressionLookupToOutbox(
 
   const attempts = (row.attempts ?? 0) + 1;
   const retryAt = new Date(Date.now() + emailOutboxBackoffMs(attempts)).toISOString();
+  const exhausted = attempts >= MAX_EMAIL_OUTBOX_ATTEMPTS;
   await admin
     .from("email_outbox")
     .update({
-      status: "pending",
+      status: exhausted ? "failed" : "pending",
       attempts,
       error: "suppression_lookup_failed",
       send_after: retryAt,

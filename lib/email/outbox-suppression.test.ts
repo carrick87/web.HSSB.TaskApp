@@ -31,6 +31,30 @@ describe("applySuppressionLookupToOutbox", () => {
     assert.equal(updates[0].sent_at, undefined);
   });
 
+  it("marks lookup exhausted after max attempts as failed", async () => {
+    const updates: Record<string, unknown>[] = [];
+    const admin = {
+      from: () => ({
+        update: (patch: Record<string, unknown>) => ({
+          eq: async () => {
+            updates.push(patch);
+          },
+        }),
+      }),
+    };
+
+    const maySend = await applySuppressionLookupToOutbox(
+      admin as never,
+      { id: "out-3", attempts: 4 },
+      "unknown"
+    );
+
+    assert.equal(maySend, false);
+    assert.equal(updates[0].status, "failed");
+    assert.equal(updates[0].attempts, 5);
+    assert.equal(updates[0].error, "suppression_lookup_failed");
+  });
+
   it("marks suppressed recipients without incrementing attempts", async () => {
     const updates: Record<string, unknown>[] = [];
     const admin = {
