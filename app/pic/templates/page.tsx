@@ -1,17 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { ORG_ROLES } from "@/lib/org/roles";
 
 export default async function PicTemplatesPage() {
-  const profile = await requireProfile();
+  const { profile, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   let query = supabase
     .from("task_templates")
     .select("id, title, description, is_active, recurrence_type, created_at")
     .order("created_at", { ascending: false });
-  if (profile.role === "pic") {
+  if (membership.role === ORG_ROLES.MANAGER) {
     query = query.eq("created_by_profile_id", profile.id);
   }
   const { data: templates } = await query;

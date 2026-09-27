@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/admin/require-super-admin";
 import { AdminNav } from "@/components/admin/AdminNav";
 
 export default async function AdminLayout({
@@ -7,7 +7,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["admin"]);
+  await requireSuperAdmin();
   return (
     <AppLayout>
       <div>

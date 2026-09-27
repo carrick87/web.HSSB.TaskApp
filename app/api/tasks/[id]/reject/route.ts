@@ -1,23 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgApiContext } from "@/lib/org/api-auth";
+import { ORG_ROLES } from "@/lib/org/roles";
+import { managerCanAccessAssignee } from "@/lib/tasks/manager-assignee-scope";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgCtx = await getOrgApiContext(false, true);
+  if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const { data: myProfile } = await supabase
-    .from("profiles")
-    .select("role, branch_id, department_id")
-    .eq("id", user.id)
-    .single();
-  if (myProfile?.role !== "admin" && myProfile?.role !== "pic") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const supabase = await createClient();
 
   const body = await request.json().catch(() => ({}));
   const comment = typeof body.comment === "string" ? body.comment.trim() : null;
@@ -32,15 +27,15 @@ export async function POST(
     return NextResponse.json({ error: "Task is not submitted" }, { status: 400 });
   }
 
-  if (myProfile.role === "pic") {
-    const { data: assignee } = await supabase
-      .from("profiles")
-      .select("branch_id, department_id")
-      .eq("id", task.assignee_profile_id)
-      .single();
-    const sameBranch = myProfile.branch_id && assignee?.branch_id === myProfile.branch_id;
-    const sameDept = myProfile.department_id && assignee?.department_id === myProfile.department_id;
-    if (!sameBranch && !sameDept) {
+  if (orgCtx.role === ORG_ROLES.MANAGER) {
+    const ok = await managerCanAccessAssignee(
+      supabase,
+      orgCtx.orgId,
+      task.assignee_profile_id,
+      orgCtx.branchId,
+      orgCtx.departmentId
+    );
+    if (!ok) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

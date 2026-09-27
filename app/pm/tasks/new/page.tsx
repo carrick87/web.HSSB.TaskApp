@@ -1,7 +1,9 @@
-import { requireRole } from "@/lib/auth";
+import { requireOrgManagerOrAbove, requireOrgContext } from "@/lib/auth";
+import { isOrgAdminRole } from "@/lib/org/roles";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createTask } from "@/lib/tasks-v2";
+import { notifyTaskAssigned } from "@/lib/notifications/task-events";
 import { getProjects } from "@/lib/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { TaskNewForm } from "@/components/pm/TaskNewForm";
@@ -13,7 +15,8 @@ export default async function NewTaskPage({
   searchParams: Promise<{ project?: string }>;
 }) {
   const { project: projectId } = await searchParams;
-  const profile = await requireRole(["admin", "pic"]);
+  const pageCtx = await requireOrgManagerOrAbove();
+  const profile = pageCtx.profile;
 
   const supabase = await createClient();
   const { data: departments } = await supabase
@@ -30,7 +33,9 @@ export default async function NewTaskPage({
 
   async function handleCreate(formData: FormData) {
     "use server";
-    const profile = await requireRole(["admin", "pic"]);
+    const actionCtx = await requireOrgManagerOrAbove();
+    const profile = actionCtx.profile;
+    const orgCtx = await requireOrgContext();
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -62,6 +67,15 @@ export default async function NewTaskPage({
       return;
     }
 
+    await notifyTaskAssigned({
+      orgId: orgCtx.org.id,
+      taskId: task.id,
+      taskTitle: task.title,
+      assigneeId: assignee_id,
+      actorId: profile.id,
+      previousAssigneeId: null,
+    });
+
     if (project_id) {
       redirect(`/pm/projects/${project_id}`);
     } else {
@@ -82,7 +96,7 @@ export default async function NewTaskPage({
             allMembers={(allMembers ?? []) as Profile[]}
             defaultDepartmentId={profile.department_id}
             defaultProjectId={projectId || null}
-            isAdmin={profile.role === "admin"}
+            isAdmin={isOrgAdminRole(pageCtx.membership.role)}
             handleCreate={handleCreate}
           />
         </CardContent>

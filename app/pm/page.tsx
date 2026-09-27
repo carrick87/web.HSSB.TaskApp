@@ -2,6 +2,7 @@ import { requireProfile } from "@/lib/auth";
 import { getMyTasks } from "@/lib/tasks-v2";
 import Link from "next/link";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function KanbanColumn({
   title,
@@ -84,6 +85,20 @@ export default async function MyTasksPage() {
   const todoTasks = tasks.filter((t) => t.status === "todo");
   const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
   const doneTasks = tasks.filter((t) => t.status === "done");
+
+  if (tasks.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-xl font-semibold text-neutral-1000">My Tasks</h1>
+        <EmptyState
+          title="Create your first task"
+          description="This workspace is ready. Add a task to track work, due dates, and attachments."
+          actionLabel="Create your first task"
+          actionHref="/pm/tasks/new"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

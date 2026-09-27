@@ -3,22 +3,28 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BrandMark } from "@/components/branding/BrandMark";
+import type { CompanyProfile } from "@/lib/company/constants";
+import { DEFAULT_COMPANY } from "@/lib/company/constants";
 
 const HARISON_EMAIL_SUFFIX = "@harrisons.com.my";
 
 type Mode = "signin" | "signup";
 
-export default function LoginForm() {
+export default function LoginForm({ company = DEFAULT_COMPANY }: { company?: CompanyProfile }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
-  const [mode, setMode] = useState<Mode>("signin");
+  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const inviteToken = searchParams.get("invite") ?? "";
+  const presetEmail = searchParams.get("email") ?? "";
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
 
   const [signupUsername, setSignupUsername] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
+  const [signupEmail, setSignupEmail] = useState(presetEmail);
   const [signupPassword, setSignupPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,10 @@ export default function LoginForm() {
         setLoading(false);
         return;
       }
+      if (data.mustChangePassword) {
+        router.push("/profile?changePassword=1");
+        return;
+      }
       router.push(redirect);
       router.refresh();
     } catch {
@@ -59,8 +69,8 @@ export default function LoginForm() {
       setError("Username is required (at least 2 characters).");
       return;
     }
-    if (signupEmail.trim() && !signupEmail.toLowerCase().trim().endsWith(HARISON_EMAIL_SUFFIX)) {
-      setError(`Email must be a Harrison email (ending in ${HARISON_EMAIL_SUFFIX}).`);
+    if (signupEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim())) {
+      setError("Enter a valid email address.");
       return;
     }
     if (!signupPassword || signupPassword.length < 6) {
@@ -76,6 +86,7 @@ export default function LoginForm() {
           username: signupUsername.trim(),
           ...(signupEmail.trim() && { email: signupEmail.trim().toLowerCase() }),
           password: signupPassword,
+          ...(inviteToken && { inviteToken }),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -84,7 +95,7 @@ export default function LoginForm() {
         setLoading(false);
         return;
       }
-      router.push(redirect);
+      router.push(data.needsOnboarding ? "/onboarding/workspace" : redirect);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -95,14 +106,14 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-[400px]">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-700 rounded-atlassian mb-4">
-          <span className="text-white font-bold text-2xl">HS</span>
+        <div className="flex justify-center mb-4">
+          <BrandMark company={company} size="lg" showName={false} />
         </div>
         <h1 className="text-2xl font-semibold text-neutral-1000 mb-1">
-          TaskApp
+          {company.name}
         </h1>
         <p className="text-neutral-700 text-sm">
-          Harrison Sabah Sdn Bhd
+          {company.tagline ?? DEFAULT_COMPANY.tagline}
         </p>
       </div>
 
@@ -204,11 +215,11 @@ export default function LoginForm() {
                 type="email"
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
-                placeholder={`you${HARISON_EMAIL_SUFFIX}`}
+                placeholder="you@company.com"
                 className="atlassian-input"
                 autoComplete="email"
               />
-              <p className="mt-1.5 text-xs text-neutral-700">Harrison email only. For records; not used for login.</p>
+              <p className="mt-1.5 text-xs text-neutral-700">Used for invites and recovery. Sign-in uses your username.</p>
             </div>
             <div>
               <label htmlFor="signup-password" className="atlassian-label">
@@ -238,6 +249,11 @@ export default function LoginForm() {
             >
               {loading ? "Creating account…" : "Create account"}
             </button>
+            <p className="text-xs text-neutral-700 text-center">
+              By signing up you agree to our{" "}
+              <Link href="/terms" className="text-brand-700 hover:underline">Terms</Link> and{" "}
+              <Link href="/privacy" className="text-brand-700 hover:underline">Privacy</Link> (placeholders).
+            </p>
           </form>
         )}
       </div>

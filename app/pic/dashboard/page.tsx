@@ -1,44 +1,43 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
 import { getTodayAppDate } from "@/lib/date";
 import { Card, CardContent } from "@/components/ui/Card";
 import Link from "next/link";
+import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
+import { listUserIdsInManagerScope, EMPTY_ASSIGNEE_SENTINEL } from "@/lib/org/manager-scope";
 
 export default async function PicDashboardPage() {
-  const profile = await requireProfile();
+  const { org, membership } = await requireOrgContext();
   const supabase = await createClient();
   const today = getTodayAppDate();
 
-  const branchId = profile.branch_id ?? undefined;
-  const deptId = profile.department_id ?? undefined;
+  const orgWide = isOrgAdminRole(membership.role);
 
   const baseQuery = supabase
     .from("task_instances")
     .select("id, status, is_late, assignee_profile_id", { count: "exact" });
 
   let query = baseQuery;
-  if (profile.role === "pic") {
-    const orFilters: string[] = [];
-    if (branchId) orFilters.push(`branch_id.eq.${branchId}`);
-    if (deptId) orFilters.push(`department_id.eq.${deptId}`);
-    const { data: assignees } = await supabase
-      .from("profiles")
-      .select("id")
-      .or(orFilters.length ? orFilters.join(",") : "id.eq.00000000-0000-0000-0000-000000000000");
-    const ids = (assignees ?? []).map((a) => a.id);
+  if (membership.role === ORG_ROLES.MANAGER) {
+    const ids = await listUserIdsInManagerScope(
+      supabase,
+      org.id,
+      membership.branch_id,
+      membership.department_id
+    );
     if (ids.length) query = query.in("assignee_profile_id", ids);
-    else query = query.eq("assignee_profile_id", "00000000-0000-0000-0000-000000000000");
+    else query = query.eq("assignee_profile_id", EMPTY_ASSIGNEE_SENTINEL);
   }
 
   const [pendingRes, verifiedTodayRes, lateRes, allRes] = await Promise.all([
     query.eq("status", "submitted").then((r) => r),
-    profile.role === "admin"
+    orgWide
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("status", "verified").gte("verified_at", `${today}T00:00:00`)
       : query.eq("status", "verified").gte("verified_at", `${today}T00:00:00`).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "admin"
+    orgWide
       ? supabase.from("task_instances").select("id", { count: "exact", head: true }).eq("is_late", true).eq("assignment_date", today)
       : query.eq("is_late", true).eq("assignment_date", today).then((r) => ({ count: r.data?.length ?? 0 })),
-    profile.role === "admin"
+    orgWide
       ? supabase.from("task_instances").select("id, status", { count: "exact" })
       : query.select("id, status"),
   ]);

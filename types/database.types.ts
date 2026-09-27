@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type ProfileRole = "admin" | "pic" | "staff";
+export type ProfileRole = "super_admin" | "manager" | "user";
 export type TaskStatus =
   | "pending"
   | "accepted"
@@ -38,9 +38,15 @@ export interface Profile {
   id: string;
   username: string;
   harrison_email: string | null;
+  auth_email?: string;
   branch_id: string | null;
   department_id: string | null;
   role: ProfileRole;
+  status?: "active" | "deactivated";
+  must_change_password?: boolean;
+  last_sign_in_at?: string | null;
+  current_org_id?: string | null;
+  is_platform_admin?: boolean;
   created_at: string;
   branch?: Branch | null;
   department?: Department | null;

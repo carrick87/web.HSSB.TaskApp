@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 import type { Project, ProjectMember, Profile } from "@/types/database.types";
 
 export async function getProjects(): Promise<Project[]> {
@@ -54,6 +55,8 @@ export async function createProject(data: {
   member_ids?: string[];
 }): Promise<{ project: Project | null; error: string | null }> {
   const supabase = await createClient();
+  const orgId = await getActiveOrgIdForUser(supabase, data.created_by);
+  if (!orgId) return { project: null, error: "No active workspace" };
   
   const { data: project, error } = await supabase
     .from("projects")
@@ -62,6 +65,7 @@ export async function createProject(data: {
       description: data.description || null,
       department_id: data.department_id,
       created_by: data.created_by,
+      org_id: orgId,
     })
     .select()
     .single();

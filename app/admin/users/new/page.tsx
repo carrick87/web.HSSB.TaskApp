@@ -1,21 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { CreateUserForm } from "@/components/admin/CreateUserForm";
+import { redirect } from "next/navigation";
 
-export default async function AdminNewUserPage() {
-  const supabase = await createClient();
-  const { data: branches } = await supabase.from("branches").select("id, name").order("name");
-  const { data: departments } = await supabase.from("departments").select("id, name, branch_id").order("name");
-
-  return (
-    <div className="space-y-6 max-w-lg">
-      <Link href="/admin/users" className="text-sm text-brand-700 hover:underline">
-        ← Back to users
-      </Link>
-      <h1 className="text-2xl font-bold text-neutral-1000">
-        Create user
-      </h1>
-      <CreateUserForm branches={branches ?? []} departments={departments ?? []} />
-    </div>
-  );
+export default function AdminUsersNewRedirect() {
+  redirect("/settings/members");
 }

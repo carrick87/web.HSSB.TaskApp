@@ -1,5 +1,12 @@
-import { requireProfile } from "@/lib/auth";
+import { requireProfile, requireOrgContext } from "@/lib/auth";
+import { isOrgAdminRole } from "@/lib/org/roles";
 import { getTask, updateTask, addTaskComment, deleteTaskComment } from "@/lib/tasks-v2";
+import { createClient } from "@/lib/supabase/server";
+import {
+  notifyTaskComment,
+  notifyTaskStatusChange,
+} from "@/lib/notifications/task-events";
+import { TaskWatchToggle } from "@/components/pm/TaskWatchToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/pm/TaskBadges";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +22,7 @@ export default async function TaskDetailPage({
 }) {
   const { id } = await params;
   const profile = await requireProfile();
+  const ctx = await requireOrgContext();
   
   const task = await getTask(id);
   if (!task) {
@@ -23,22 +31,58 @@ export default async function TaskDetailPage({
 
   const isAssignee = task.assignee_id === profile.id;
   const isCreator = task.created_by === profile.id;
-  const isAdmin = profile.role === "admin";
-  const canEdit = isAssignee || isCreator || isAdmin;
+  const isOrgAdmin = isOrgAdminRole(ctx.membership.role);
+  const canEdit = isAssignee || isCreator || isOrgAdmin;
+
+  const supabase = await createClient();
+  const { data: watchRow } = await supabase
+    .from("task_watchers")
+    .select("user_id")
+    .eq("task_id", id)
+    .eq("user_id", profile.id)
+    .maybeSingle();
+  const isWatching = Boolean(watchRow);
 
   async function handleStatusUpdate(formData: FormData) {
     "use server";
+    const profile = await requireProfile();
+    const ctx = await requireOrgContext();
     const status = formData.get("status") as "todo" | "in_progress" | "done";
+    const before = await getTask(id);
+    if (!before) return;
     await updateTask(id, { status });
+    await notifyTaskStatusChange({
+      orgId: ctx.org.id,
+      taskId: id,
+      taskTitle: before.title,
+      actorId: profile.id,
+      assigneeId: before.assignee_id,
+      createdBy: before.created_by,
+      status,
+      previousStatus: before.status,
+    });
     revalidatePath(`/pm/tasks/${id}`);
   }
 
   async function handleAddComment(formData: FormData) {
     "use server";
     const profile = await requireProfile();
+    const ctx = await requireOrgContext();
     const content = formData.get("content") as string;
     if (!content.trim()) return;
+    const before = await getTask(id);
     await addTaskComment(id, profile.id, content);
+    if (before) {
+      await notifyTaskComment({
+        orgId: ctx.org.id,
+        taskId: id,
+        taskTitle: before.title,
+        actorId: profile.id,
+        assigneeId: before.assignee_id,
+        createdBy: before.created_by,
+        content: content.trim(),
+      });
+    }
     revalidatePath(`/pm/tasks/${id}`);
   }
 
@@ -73,7 +117,7 @@ export default async function TaskDetailPage({
             {task.title}
           </h1>
         </div>
-        {(isCreator || isAdmin) && (
+        {(isCreator || isOrgAdmin) && (
           <Link
             href={`/pm/tasks/${id}/edit`}
             className="text-sm text-brand-700 hover:text-brand-800 hover:underline"
@@ -81,6 +125,7 @@ export default async function TaskDetailPage({
             Edit
           </Link>
         )}
+        <TaskWatchToggle taskId={id} initialWatching={isWatching} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -102,7 +147,7 @@ export default async function TaskDetailPage({
             </CardContent>
           </Card>
 
-          <TaskAttachments task={task} canUpload={canEdit} />
+          <TaskAttachments task={task} orgId={ctx.org.id} canUpload={canEdit} />
 
           <Card>
             <CardHeader>
@@ -125,7 +170,7 @@ export default async function TaskDetailPage({
                             {new Date(comment.created_at).toLocaleDateString()}{" "}
                             {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </time>
-                          {(comment.author_id === profile.id || isAdmin) && (
+                          {(comment.author_id === profile.id || isOrgAdmin) && (
                             <form action={handleDeleteComment}>
                               <input type="hidden" name="commentId" value={comment.id} />
                               <button

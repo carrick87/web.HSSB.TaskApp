@@ -43,6 +43,7 @@ export default async function TaskDetailPage({
     .from("task_template_questions")
     .select("*")
     .eq("template_id", templateId)
+    .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
   const t = task as unknown as {

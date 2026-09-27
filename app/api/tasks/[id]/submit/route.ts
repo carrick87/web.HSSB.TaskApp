@@ -156,12 +156,14 @@ export async function POST(
     }
   }
 
-  await supabase
-    .from("task_instance_answers")
-    .delete()
-    .eq("task_instance_id", taskId);
+  await supabase.from("task_instance_answers").delete().eq("task_instance_id", taskId);
   if (answersToUpsert.length > 0) {
-    await supabase.from("task_instance_answers").insert(answersToUpsert);
+    const { error: answersError } = await supabase
+      .from("task_instance_answers")
+      .upsert(answersToUpsert, { onConflict: "task_instance_id,question_id" });
+    if (answersError) {
+      return NextResponse.json({ error: answersError.message }, { status: 500 });
+    }
   }
 
   const { error: updateError } = await supabase

@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { requireOrgContext } from "@/lib/auth";
+import { ORG_ROLES } from "@/lib/org/roles";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { VerifyActions } from "@/components/tasks/VerifyActions";
 import { FileAnswerView } from "@/components/tasks/FileAnswerView";
-import type { TaskTemplateQuestion } from "@/types/database.types";
+import { managerCanAccessAssignee } from "@/lib/tasks/manager-assignee-scope";
 
 function assigneeDisplay(a: unknown): { username: string; branchName: string; departmentName: string } {
   const raw = Array.isArray(a) ? a[0] : a;
@@ -24,7 +25,7 @@ export default async function PicVerifyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await requireProfile();
+  const { org, membership } = await requireOrgContext();
   const supabase = await createClient();
 
   const { data: task, error } = await supabase
@@ -55,29 +56,38 @@ export default async function PicVerifyDetailPage({
     );
   }
 
-  if (profile.role === "pic") {
+  if (membership.role === ORG_ROLES.MANAGER) {
     const assigneeId = (task as { assignee_profile_id: string }).assignee_profile_id;
-    const { data: assigneeProfileData } = await supabase
-      .from("profiles")
-      .select("branch_id, department_id")
-      .eq("id", assigneeId)
-      .single();
-    const sameBranch = profile.branch_id && assigneeProfileData?.branch_id === profile.branch_id;
-    const sameDept = profile.department_id && assigneeProfileData?.department_id === profile.department_id;
-    if (!sameBranch && !sameDept) notFound();
+    const ok = await managerCanAccessAssignee(
+      supabase,
+      org.id,
+      assigneeId,
+      membership.branch_id,
+      membership.department_id
+    );
+    if (!ok) notFound();
   }
 
   const templateId = Array.isArray(task.template) ? (task.template[0] as { id?: string })?.id : (task.template as { id?: string })?.id;
-  const { data: questions } = await supabase
-    .from("task_template_questions")
-    .select("*")
-    .eq("template_id", templateId)
-    .order("sort_order", { ascending: true });
-
   const { data: answers } = await supabase
     .from("task_instance_answers")
     .select("id, question_id, answer_text, answer_number, answer_boolean, answer_file_url")
     .eq("task_instance_id", id);
+
+  const answerQuestionIds = (answers ?? []).map((a) => a.question_id);
+  let questionsQuery = supabase
+    .from("task_template_questions")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: true });
+  if (answerQuestionIds.length > 0) {
+    questionsQuery = questionsQuery.or(
+      `is_active.eq.true,id.in.(${answerQuestionIds.join(",")})`
+    );
+  } else {
+    questionsQuery = questionsQuery.eq("is_active", true);
+  }
+  const { data: questions } = await questionsQuery;
 
   const assignee = assigneeDisplay(task.assignee);
   const taskTitle = Array.isArray(task.template) ? (task.template[0] as { title?: string })?.title : (task.template as { title?: string })?.title;

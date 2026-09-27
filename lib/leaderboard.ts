@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { filterUserIdsByOrgMembershipLocation } from "@/lib/org/membership-assignees";
+import { getActiveOrgIdForUser } from "@/lib/org/active-org";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -18,11 +20,19 @@ export async function getLeaderboard(options: {
   year?: number;
   branchId?: string;
   departmentId?: string;
+  orgId?: string;
+  userId?: string;
 }): Promise<{ leaderboard: LeaderboardEntry[]; period: string; month?: number; year?: number }> {
   const supabase = await createClient();
   const { period, month = new Date().getMonth() + 1, year = new Date().getFullYear(), branchId, departmentId } = options;
 
+  let orgId = options.orgId;
+  if (!orgId && options.userId) {
+    orgId = (await getActiveOrgIdForUser(supabase, options.userId)) ?? undefined;
+  }
+
   let query = supabase.from("user_points").select("profile_id, points_earned");
+  if (orgId) query = query.eq("org_id", orgId);
   if (period === "month") query = query.eq("month", month).eq("year", year);
   else if (period === "year") query = query.eq("year", year);
 
@@ -34,13 +44,14 @@ export async function getLeaderboard(options: {
   }
 
   let profileIds = Object.keys(byProfile);
-  if (branchId || departmentId) {
-    let f = supabase.from("profiles").select("id");
-    if (branchId) f = f.eq("branch_id", branchId);
-    if (departmentId) f = f.eq("department_id", departmentId);
-    const { data: filtered } = await f;
-    const allowed = new Set((filtered ?? []).map((p) => p.id));
-    profileIds = profileIds.filter((id) => allowed.has(id));
+  if (orgId && (branchId || departmentId)) {
+    profileIds = await filterUserIdsByOrgMembershipLocation(
+      supabase,
+      orgId,
+      profileIds,
+      branchId,
+      departmentId
+    );
   }
 
   const { data: stats } = await supabase
