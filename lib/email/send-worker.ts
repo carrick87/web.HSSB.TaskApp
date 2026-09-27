@@ -11,13 +11,11 @@ import {
   taskThreadRootMessageId,
 } from "./format";
 import { parseOrganizationReplyTo } from "./reply-to";
-import { isRecipientEmailSuppressed } from "./suppression";
+import { lookupRecipientSuppression } from "./suppression";
+import { applySuppressionLookupToOutbox } from "./outbox-suppression";
+import { emailOutboxBackoffMs, MAX_EMAIL_OUTBOX_ATTEMPTS } from "./retry";
 
-const MAX_ATTEMPTS = 5;
-
-function backoffMs(attempts: number) {
-  return Math.min(60_000 * 2 ** attempts, 30 * 60_000);
-}
+const MAX_ATTEMPTS = MAX_EMAIL_OUTBOX_ATTEMPTS;
 
 async function loadOrgBranding(admin: ReturnType<typeof createAdminClient>, orgId: string | null) {
   if (!orgId) {
@@ -132,13 +130,9 @@ export async function processEmailOutbox(limit = 40) {
   for (const row of merged) {
     await admin.from("email_outbox").update({ status: "processing" }).eq("id", row.id);
 
-    if (await isRecipientEmailSuppressed(admin, row.recipient_email)) {
-      await admin
-        .from("email_outbox")
-        .update({ status: "suppressed", error: "recipient_suppressed" })
-        .eq("id", row.id);
-      continue;
-    }
+    const suppressionStatus = await lookupRecipientSuppression(admin, row.recipient_email);
+    const maySend = await applySuppressionLookupToOutbox(admin, row, suppressionStatus);
+    if (!maySend) continue;
 
     const recipientUserId = row.payload.recipientUserId as string | undefined;
     const unsubscribeUrl =
@@ -222,7 +216,7 @@ export async function processEmailOutbox(limit = 40) {
 
     if (error) {
       const attempts = (row.attempts ?? 0) + 1;
-      const retryAt = new Date(Date.now() + backoffMs(attempts)).toISOString();
+      const retryAt = new Date(Date.now() + emailOutboxBackoffMs(attempts)).toISOString();
       await admin
         .from("email_outbox")
         .update({

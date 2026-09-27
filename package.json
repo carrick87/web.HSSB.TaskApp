@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
-    "test": "tsx --test lib/email/*.test.ts"
+    "test": "tsx --test lib/email/*.test.ts lib/settings/*.test.ts"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",

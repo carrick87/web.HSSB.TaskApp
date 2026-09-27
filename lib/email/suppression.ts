@@ -3,9 +3,14 @@ import { normalizeEmailAddress } from "@/lib/email/address";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-export async function isRecipientEmailSuppressed(admin: AdminClient, recipientEmail: string) {
+export type RecipientSuppressionStatus = "suppressed" | "not_suppressed" | "unknown";
+
+export async function lookupRecipientSuppression(
+  admin: AdminClient,
+  recipientEmail: string
+): Promise<RecipientSuppressionStatus> {
   const email = normalizeEmailAddress(recipientEmail.trim());
-  if (!email) return false;
+  if (!email) return "not_suppressed";
 
   const { data: authRow, error: authError } = await admin
     .from("profiles")
@@ -14,8 +19,8 @@ export async function isRecipientEmailSuppressed(admin: AdminClient, recipientEm
     .eq("auth_email", email)
     .limit(1)
     .maybeSingle();
-  if (authError) return true;
-  if (authRow) return true;
+  if (authError) return "unknown";
+  if (authRow) return "suppressed";
 
   const { data: harrisonRow, error: harrisonError } = await admin
     .from("profiles")
@@ -24,6 +29,7 @@ export async function isRecipientEmailSuppressed(admin: AdminClient, recipientEm
     .eq("harrison_email", email)
     .limit(1)
     .maybeSingle();
-  if (harrisonError) return true;
-  return Boolean(harrisonRow);
+  if (harrisonError) return "unknown";
+  if (harrisonRow) return "suppressed";
+  return "not_suppressed";
 }

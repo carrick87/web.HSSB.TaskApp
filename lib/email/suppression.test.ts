@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isRecipientEmailSuppressed } from "./suppression";
+import { lookupRecipientSuppression } from "./suppression";
 
 function buildLookupAdmin(onMaybeSingle: (column: string, value: string) => Promise<{ data: unknown; error: unknown }>) {
   return {
@@ -21,7 +21,7 @@ function buildLookupAdmin(onMaybeSingle: (column: string, value: string) => Prom
   };
 }
 
-describe("isRecipientEmailSuppressed", () => {
+describe("lookupRecipientSuppression", () => {
   it("uses two separate exact eq queries (auth_email, then harrison_email)", async () => {
     const steps: string[] = [];
     const admin = buildLookupAdmin(async (column, value) => {
@@ -29,8 +29,8 @@ describe("isRecipientEmailSuppressed", () => {
       return { data: null, error: null };
     });
 
-    const suppressed = await isRecipientEmailSuppressed(admin as never, "user@example.com");
-    assert.equal(suppressed, false);
+    const status = await lookupRecipientSuppression(admin as never, "user@example.com");
+    assert.equal(status, "not_suppressed");
     assert.deepEqual(steps, ["auth_email=user@example.com", "harrison_email=user@example.com"]);
   });
 
@@ -42,17 +42,17 @@ describe("isRecipientEmailSuppressed", () => {
         return { select: () => ({ eq: () => ({ eq: () => ({ limit: () => ({ maybeSingle: async () => ({}) }) }) }) }) };
       },
     };
-    const suppressed = await isRecipientEmailSuppressed(admin as never, "*@harrisons.com.my");
-    assert.equal(suppressed, false);
+    const status = await lookupRecipientSuppression(admin as never, "*@harrisons.com.my");
+    assert.equal(status, "not_suppressed");
     assert.equal(queries, 0);
   });
 
-  it("treats lookup errors as suppressed (fail closed)", async () => {
+  it("returns unknown on lookup errors so the worker can retry", async () => {
     const admin = buildLookupAdmin(async (column) => {
       if (column === "auth_email") return { data: null, error: { message: "db down" } };
       return { data: null, error: null };
     });
-    const suppressed = await isRecipientEmailSuppressed(admin as never, "user@example.com");
-    assert.equal(suppressed, true);
+    const status = await lookupRecipientSuppression(admin as never, "user@example.com");
+    assert.equal(status, "unknown");
   });
 });
