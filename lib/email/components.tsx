@@ -38,6 +38,8 @@ export const emailDarkModeStyles = `
     .bg{background:#1D2125!important}
     .card{background:#22272B!important;border-color:#38414A!important}
     .h1,.strong{color:#DEE4EA!important}
+    .org-badge{background:#FFFFFF!important;color-scheme:light!important}
+    .org-badge-text{color:#172B4D!important;-webkit-text-fill-color:#172B4D!important}
     .body{color:#B6C2CF!important}
     .muted{color:#8C9BAB!important}
     .row{border-color:#38414A!important}
@@ -50,8 +52,10 @@ export const emailDarkModeStyles = `
     .hr{border-color:#38414A!important}
   }
   [data-ogsc] .h1,[data-ogsc] .strong{color:#DEE4EA!important}
+  [data-ogsc] .org-badge-text{color:#172B4D!important;-webkit-text-fill-color:#172B4D!important}
   [data-ogsc] .body{color:#B6C2CF!important}
   [data-ogsb] .card{background:#22272B!important}
+  [data-ogsb] .org-badge{background:#FFFFFF!important;color-scheme:light!important}
 `;
 
 export function EmailShell({ branding, preview, children, footer, preheader, productName }: EmailShellProps) {
@@ -105,17 +109,26 @@ export function EmailShell({ branding, preview, children, footer, preheader, pro
                         <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
                           <tbody>
                             <tr>
-                              <td style={{ background: "#FFFFFF", borderRadius: "8px", padding: "8px 12px" }}>
+                              <td
+                                className="org-badge"
+                                style={{
+                                  background: "#FFFFFF",
+                                  borderRadius: "8px",
+                                  padding: "8px 12px",
+                                  colorScheme: "light",
+                                }}
+                              >
                                 {logoUrl ? (
                                   <Img
                                     src={logoUrl}
                                     alt={branding.orgName}
                                     height={20}
+                                    className="org-badge-logo"
                                     style={{ maxWidth: "200px", display: "block" }}
                                   />
                                 ) : (
                                   <span
-                                    className="strong"
+                                    className="org-badge-text"
                                     style={{
                                       font: `700 15px/20px ${fontStack}`,
                                       color: "#172B4D",

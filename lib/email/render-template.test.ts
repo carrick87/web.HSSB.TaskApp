@@ -129,6 +129,16 @@ describe("renderEmailTemplate task_digest", () => {
     assert.ok(emailDarkModeStyles.includes("supported-color-schemes"));
   });
 
+  it("keeps org badge text dark on white in dark-mode CSS", () => {
+    assert.match(
+      emailDarkModeStyles,
+      /@media \(prefers-color-scheme:dark\)\{[\s\S]*\.org-badge-text\{color:#172B4D!important/
+    );
+    assert.doesNotMatch(emailDarkModeStyles, /\.org-badge-text\{[^}]*#DEE4EA/);
+    assert.match(emailDarkModeStyles, /\[data-ogsc\] \.org-badge-text\{color:#172B4D!important/);
+    assert.match(emailDarkModeStyles, /\[data-ogsb\] \.org-badge\{background:#FFFFFF!important/);
+  });
+
   it("uses bulletproof button padding without fixed height", async () => {
     const rendered = await renderEmailTemplate({
       template: "task_digest",
@@ -191,7 +201,7 @@ describe("renderEmailTemplate task_digest", () => {
       branding: {
         orgId: "preview",
         orgName: "Harrison Sabah Sdn Bhd",
-        postalAddress: "12 Jalan Tun Abang Haji Openg, 93000 Kuching, Sarawak",
+        postalAddress: "Sample address line, City",
       },
       appUrl: "https://app.example.com",
       emailFrom: EMAIL_FROM,
@@ -206,7 +216,7 @@ describe("renderEmailTemplate task_digest", () => {
       darkPath,
       rendered.html.replace(
         "<head>",
-        '<head><meta name="color-scheme" content="dark"><style>html{color-scheme:dark!important}body{background:#1D2125!important}.bg{background:#1D2125!important}.card{background:#22272B!important;border-color:#38414A!important}.h1,.strong{color:#DEE4EA!important}.body{color:#B6C2CF!important}.muted{color:#8C9BAB!important}</style>'
+        '<head><meta name="color-scheme" content="dark"><style>html{color-scheme:dark!important}body{background:#1D2125!important}.bg{background:#1D2125!important}.card{background:#22272B!important;border-color:#38414A!important}.h1,.strong{color:#DEE4EA!important}.org-badge{background:#FFFFFF!important;color-scheme:light!important}.org-badge-text{color:#172B4D!important;-webkit-text-fill-color:#172B4D!important}.body{color:#B6C2CF!important}.muted{color:#8C9BAB!important}</style>'
       )
     );
     assert.ok(fs.statSync(lightPath).size > 500);
