@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES } from "@/lib/org/roles";
+import { normalizeEmailAddress } from "@/lib/email/address";
 
 export async function POST(request: Request) {
   const ctx = await getOrgApiContext(true);
@@ -15,8 +16,8 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   for (const raw of emails) {
-    const email = String(raw).trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+    const email = normalizeEmailAddress(String(raw));
+    if (!email) continue;
     const { data: invite } = await admin
       .from("organization_invites")
       .insert({

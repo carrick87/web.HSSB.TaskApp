@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ORG_ROLES } from "@/lib/org/roles";
+import { normalizeEmailAddress } from "@/lib/email/address";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const username = typeof body.username === "string" ? body.username.trim() : "";
-    const emailRaw = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const emailInput = typeof body.email === "string" ? body.email : "";
+    const emailRaw = emailInput.trim() ? (normalizeEmailAddress(emailInput) ?? "") : "";
     const password = typeof body.password === "string" ? body.password : "";
     const inviteToken =
       typeof body.inviteToken === "string"
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (emailRaw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
+    if (emailInput.trim() && !emailRaw) {
       return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
     if (!password || password.length < 6) {

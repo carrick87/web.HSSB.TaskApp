@@ -1,21 +1,29 @@
 import type { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeEmailAddress } from "@/lib/email/address";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-/** Escape `%` and `_` for case-insensitive exact `ilike` match. */
-export function escapeIlikeExact(value: string) {
-  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
-
 export async function isRecipientEmailSuppressed(admin: AdminClient, recipientEmail: string) {
-  const needle = recipientEmail.trim().toLowerCase();
-  if (!needle) return false;
-  const pattern = escapeIlikeExact(needle);
-  const { data } = await admin
+  const email = normalizeEmailAddress(recipientEmail.trim());
+  if (!email) return false;
+
+  const { data: authRow, error: authError } = await admin
     .from("profiles")
     .select("id")
     .eq("email_suppressed", true)
-    .or(`auth_email.ilike.${pattern},harrison_email.ilike.${pattern}`)
-    .limit(1);
-  return (data?.length ?? 0) > 0;
+    .eq("auth_email", email)
+    .limit(1)
+    .maybeSingle();
+  if (authError) return true;
+  if (authRow) return true;
+
+  const { data: harrisonRow, error: harrisonError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email_suppressed", true)
+    .eq("harrison_email", email)
+    .limit(1)
+    .maybeSingle();
+  if (harrisonError) return true;
+  return Boolean(harrisonRow);
 }

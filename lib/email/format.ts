@@ -55,7 +55,13 @@ export function parseFromAddress(from: string) {
 /** Display name from EMAIL_FROM (e.g. `HAR TaskApp`); not the workspace suffix. */
 export function emailProductDisplayName(emailFromEnv: string) {
   const match = emailFromEnv.match(/^(.+?)\s*<([^>]+)>$/);
-  if (match) return match[1].trim();
+  if (match) {
+    let name = match[1].trim();
+    if (name.length >= 2 && name.startsWith('"') && name.endsWith('"')) {
+      name = name.slice(1, -1).trim();
+    }
+    return name;
+  }
   return EMAIL_PRODUCT_NAME_FALLBACK;
 }
 

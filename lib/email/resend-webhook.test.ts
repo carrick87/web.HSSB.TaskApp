@@ -54,13 +54,16 @@ describe("extractResendWebhookRecipientEmails", () => {
 });
 
 describe("suppressProfilesForEmail", () => {
-  it("updates auth_email and harrison_email with case-insensitive ilike", async () => {
-    const calls: { column: string; value: string }[] = [];
+  it("updates auth_email and harrison_email with exact eq", async () => {
+    const calls: { method: string; column: string; value: string }[] = [];
     const admin = {
       from: () => ({
         update: () => ({
-          ilike: async (column: string, value: string) => {
-            calls.push({ column, value });
+          eq: async (column: string, value: string) => {
+            calls.push({ method: "eq", column, value });
+          },
+          ilike: async () => {
+            calls.push({ method: "ilike", column: "", value: "" });
           },
         }),
       }),
@@ -68,14 +71,30 @@ describe("suppressProfilesForEmail", () => {
 
     await suppressProfilesForEmail(admin, ["a@example.com", "b@example.com"], "email.bounced");
 
+    assert.equal(calls.filter((c) => c.method === "ilike").length, 0);
     assert.equal(calls.length, 4);
     assert.deepEqual(calls.filter((c) => c.column === "auth_email").map((c) => c.value), [
       "a@example.com",
       "b@example.com",
     ]);
-    assert.deepEqual(calls.filter((c) => c.column === "harrison_email").map((c) => c.value), [
-      "a@example.com",
-      "b@example.com",
-    ]);
+  });
+
+  it("never runs profile updates for *@harrisons.com.my", async () => {
+    const calls: { method: string }[] = [];
+    const admin = {
+      from: () => ({
+        update: () => ({
+          eq: async () => {
+            calls.push({ method: "eq" });
+          },
+          ilike: async () => {
+            calls.push({ method: "ilike" });
+          },
+        }),
+      }),
+    };
+
+    await suppressProfilesForEmail(admin, ["*@harrisons.com.my"], "email.bounced");
+    assert.equal(calls.length, 0);
   });
 });

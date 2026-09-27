@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgApiContext } from "@/lib/org/api-auth";
 import { ORG_ROLES, isOrgAdminRole } from "@/lib/org/roles";
 import { writeOrgAuditLog } from "@/lib/org/audit";
+import { normalizeEmailAddress } from "@/lib/email/address";
 
 export async function GET() {
   const ctx = await getOrgApiContext();
@@ -67,9 +68,17 @@ export async function POST(request: Request) {
   if (method === "temp_password" && (!password || password.length < 6)) {
     return NextResponse.json({ error: "Password required" }, { status: 400 });
   }
+  const harrisonEmail =
+    method === "temp_password" && email?.trim() ? normalizeEmailAddress(String(email)) : null;
+  if (method === "temp_password" && email?.trim() && !harrisonEmail) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
 
   if (method === "invite") {
-    const emailNorm = email.trim().toLowerCase();
+    const emailNorm = normalizeEmailAddress(String(email));
+    if (!emailNorm) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    }
     const { data: invite, error: inviteError } = await admin
       .from("organization_invites")
       .insert({

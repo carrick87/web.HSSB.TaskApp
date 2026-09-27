@@ -16,6 +16,13 @@ describe("emailProductDisplayName", () => {
     assert.equal(emailProductDisplayName(EMAIL_FROM), "HAR TaskApp");
   });
 
+  it("strips surrounding double quotes from display name", () => {
+    assert.equal(
+      emailProductDisplayName('"HAR TaskApp" <notifications@carrick.my>'),
+      "HAR TaskApp"
+    );
+  });
+
   it("falls back when EMAIL_FROM is a bare address", () => {
     assert.equal(emailProductDisplayName("notifications@carrick.my"), "HAR TaskApp");
   });
