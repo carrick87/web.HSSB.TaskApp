@@ -14,7 +14,6 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { PRODUCT_NAME } from "@/src/config/product";
 import { getOrgLogoPublicUrl } from "@/lib/org/logo-url";
 
 export type OrgEmailBranding = {
@@ -39,6 +38,7 @@ export type EmailShellProps = {
   children: React.ReactNode;
   footer: EmailFooterProps;
   preheader?: string;
+  productName: string;
 };
 
 const outerBg = { backgroundColor: "#f4f5f7", margin: 0 };
@@ -83,7 +83,7 @@ const quoteStyle = {
   lineHeight: "22px",
 };
 
-export function EmailShell({ branding, preview, children, footer, preheader }: EmailShellProps) {
+export function EmailShell({ branding, preview, children, footer, preheader, productName }: EmailShellProps) {
   const supabaseUrl = branding.supabaseUrl ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const logoUrl = getOrgLogoPublicUrl(supabaseUrl, branding.orgId, branding.logoWidePath);
   const pre = preheader ?? preview;
@@ -141,7 +141,7 @@ export function EmailShell({ branding, preview, children, footer, preheader }: E
             </Text>
           ) : null}
           <Text style={{ fontSize: "11px", color: "#8993a4", margin: "12px 0 0" }}>
-            {PRODUCT_NAME} · {branding.orgName}
+            {productName} · {branding.orgName}
           </Text>
         </Container>
       </Body>

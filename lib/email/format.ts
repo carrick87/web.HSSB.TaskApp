@@ -1,6 +1,7 @@
-import { PRODUCT_NAME } from "@/src/config/product";
-
 export type DateFormatPref = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
+
+/** Product label in email From headers when EMAIL_FROM has no display name. */
+export const EMAIL_PRODUCT_NAME_FALLBACK = "HAR TaskApp";
 
 export function localeForDateFormat(format: string) {
   if (format === "MM/DD/YYYY") return "en-US";
@@ -46,12 +47,34 @@ export function formatDateTimeInTimezone(
 export function parseFromAddress(from: string) {
   const match = from.match(/^(.+?)\s*<([^>]+)>$/);
   if (match) return { name: match[1].trim(), email: match[2].trim() };
-  return { name: PRODUCT_NAME, email: from.trim() };
+  return { name: EMAIL_PRODUCT_NAME_FALLBACK, email: from.trim() };
+}
+
+/** Display name from EMAIL_FROM (e.g. `HAR TaskApp`); not the workspace suffix. */
+export function emailProductDisplayName(emailFromEnv: string) {
+  const match = emailFromEnv.match(/^(.+?)\s*<([^>]+)>$/);
+  if (match) return match[1].trim();
+  return EMAIL_PRODUCT_NAME_FALLBACK;
+}
+
+export function sanitizeOrgNameForHeader(orgName: string) {
+  return orgName.replace(/[\r\n]+/g, " ").replace(/[<>"]/g, "").trim();
+}
+
+/** Quote a display-name atom per RFC 5322 when it contains specials. */
+export function quoteRfc5322DisplayNameAtom(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return '""';
+  const needsQuotes = /[,;\\"]/.test(trimmed) || /[^\x20-\x7E]/.test(trimmed);
+  if (!needsQuotes) return trimmed;
+  return `"${trimmed.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 export function buildWorkspaceFromHeader(orgName: string, emailFromEnv: string) {
   const { email } = parseFromAddress(emailFromEnv);
-  const displayName = `${orgName} via ${PRODUCT_NAME}`;
+  const productName = emailProductDisplayName(emailFromEnv);
+  const org = quoteRfc5322DisplayNameAtom(sanitizeOrgNameForHeader(orgName));
+  const displayName = `${org} via ${productName}`;
   return `${displayName} <${email}>`;
 }
 

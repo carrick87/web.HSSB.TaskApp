@@ -19,18 +19,26 @@ function backoffMs(attempts: number) {
 
 async function loadOrgBranding(admin: ReturnType<typeof createAdminClient>, orgId: string | null) {
   if (!orgId) {
-    return { orgId: "unknown", orgName: "Workspace", logoWidePath: null, postalAddress: null as string | null };
+    return {
+      orgId: "unknown",
+      orgName: "Workspace",
+      logoWidePath: null,
+      postalAddress: null as string | null,
+      contactEmail: null as string | null,
+    };
   }
   const { data } = await admin
     .from("organizations")
-    .select("id, name, logo_wide_path, address")
+    .select("id, name, logo_wide_path, address, email")
     .eq("id", orgId)
     .single();
+  const contactEmail = data?.email?.trim() || null;
   return {
     orgId: data?.id ?? orgId,
     orgName: data?.name ?? "Workspace",
     logoWidePath: data?.logo_wide_path ?? null,
     postalAddress: data?.address ?? null,
+    contactEmail,
   };
 }
 
@@ -135,6 +143,7 @@ export async function processEmailOutbox(limit = 40) {
       payload: row.payload as Record<string, unknown>,
       branding,
       appUrl: config.appUrl,
+      emailFrom: config.from,
       unsubscribeUrl,
       timezone: locale.timezone,
       dateFormat: locale.dateFormat,
@@ -177,17 +186,29 @@ export async function processEmailOutbox(limit = 40) {
       continue;
     }
 
-    const { data, error } = await resend.emails.send(
-      {
-        from,
-        to: row.recipient_email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        headers,
-      },
-      { idempotencyKey: row.idempotency_key ?? row.id }
-    );
+    const sendPayload: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+      text: string;
+      headers: Record<string, string>;
+      replyTo?: string;
+    } = {
+      from,
+      to: row.recipient_email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      headers,
+    };
+    if (branding.contactEmail) {
+      sendPayload.replyTo = branding.contactEmail;
+    }
+
+    const { data, error } = await resend.emails.send(sendPayload, {
+      idempotencyKey: row.idempotency_key ?? row.id,
+    });
 
     if (error) {
       const attempts = (row.attempts ?? 0) + 1;

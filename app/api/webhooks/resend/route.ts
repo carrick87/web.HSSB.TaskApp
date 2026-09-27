@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEmailConfig } from "@/lib/email/config";
+import {
+  extractResendWebhookRecipientEmails,
+  suppressProfilesForEmail,
+} from "@/lib/email/resend-webhook";
 
 function verifySvix(payload: string, secret: string, headers: Headers) {
   const msgId = headers.get("svix-id");
@@ -44,24 +48,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  let body: { type?: string; data?: { email?: string; bounce?: { type?: string } } };
+  let body: { type?: string; data?: { email?: string; to?: string | string[]; bounce?: { type?: string } } };
   try {
     body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const email = body.data?.email?.trim().toLowerCase();
-  if (!email) return NextResponse.json({ ok: true });
+  const emails = extractResendWebhookRecipientEmails(body.data);
+  if (!emails.length) return NextResponse.json({ ok: true });
 
   if (body.type === "email.bounced" || body.type === "email.complained") {
     const admin = createAdminClient();
-    const patch = {
-      email_suppressed: true,
-      email_suppression_reason: body.type,
-    };
-    await admin.from("profiles").update(patch).eq("auth_email", email);
-    await admin.from("profiles").update(patch).eq("harrison_email", email);
+    await suppressProfilesForEmail(admin, emails, body.type);
   }
 
   return NextResponse.json({ ok: true });
